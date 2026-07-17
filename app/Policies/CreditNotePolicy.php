@@ -14,19 +14,19 @@ class CreditNotePolicy
 
     public function viewAny(User $user): bool
     {
-        return BouncerFacade::can('view-credit-note', CreditNote::class);
+        return BouncerFacade::can('view-invoice', Invoice::class);
     }
 
     public function view(User $user, CreditNote $creditNote): bool
     {
         return $user->hasCompany($creditNote->company_id)
-            && BouncerFacade::can('view-credit-note', CreditNote::class);
+            && BouncerFacade::can('view-invoice', Invoice::class);
     }
 
     public function create(User $user, Invoice $invoice): bool
     {
         return $user->hasCompany($invoice->company_id)
-            && BouncerFacade::can('create-credit-note', CreditNote::class);
+            && BouncerFacade::can('create-invoice', Invoice::class);
     }
 
     public function update(User $user, CreditNote $creditNote): bool
