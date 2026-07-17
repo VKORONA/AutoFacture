@@ -33,14 +33,25 @@ class CompanyRequest extends FormRequest
             'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9A-Z]{13,32}$/i'],
             'bic' => ['nullable', 'string', 'max:11', 'regex:/^[A-Z0-9]{8}([A-Z0-9]{3})?$/i'],
             'vat_regime' => ['required', Rule::in(['standard', 'franchise_base', 'exempt'])],
-            'vat_exempt' => ['boolean'],
+            'vat_exempt' => ['required', 'boolean'],
             'electronic_invoicing_email' => ['nullable', 'email', 'max:255'],
             'address.country_id' => ['required'],
         ];
     }
 
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($this->siren && $this->siret && substr($this->siret, 0, 9) !== $this->siren) {
+                $validator->errors()->add('siret', 'Le SIRET doit commencer par le SIREN de l’entreprise.');
+            }
+        });
+    }
+
     protected function prepareForValidation()
     {
+        $vatRegime = $this->vat_regime ?: 'standard';
+
         $this->merge([
             'siren' => $this->digitsOnly($this->siren),
             'siret' => $this->digitsOnly($this->siret),
@@ -48,7 +59,8 @@ class CompanyRequest extends FormRequest
             'ape_code' => $this->upperCompact($this->ape_code),
             'iban' => $this->upperCompact($this->iban),
             'bic' => $this->upperCompact($this->bic),
-            'vat_exempt' => filter_var($this->vat_exempt, FILTER_VALIDATE_BOOLEAN),
+            'vat_regime' => $vatRegime,
+            'vat_exempt' => in_array($vatRegime, ['franchise_base', 'exempt'], true),
         ]);
     }
 
