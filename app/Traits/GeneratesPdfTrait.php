@@ -3,6 +3,7 @@
 namespace Crater\Traits;
 
 use Carbon\Carbon;
+use Crater\Domain\FrenchInvoicing\FrenchLegalMentionBuilder;
 use Crater\Models\Address;
 use Crater\Models\CompanySetting;
 use Crater\Models\FileDisk;
@@ -20,10 +21,8 @@ trait GeneratesPdfTrait
             ]);
         }
 
-        $locale = CompanySetting::getSetting('language',  $this->company_id);
-
+        $locale = CompanySetting::getSetting('language', $this->company_id);
         App::setLocale($locale);
-
         $pdf = $this->getPDFData();
 
         return response()->make($pdf->stream(), 200, [
@@ -36,23 +35,16 @@ trait GeneratesPdfTrait
     {
         try {
             $media = $this->getMedia($collection_name)->first();
-
             if ($media) {
                 $file_disk = FileDisk::find($media->custom_properties['file_disk_id']);
-
                 if (! $file_disk) {
                     return false;
                 }
 
                 $file_disk->setConfig();
-
-                $path = null;
-
-                if ($file_disk->driver == 'local') {
-                    $path = $media->getPath();
-                } else {
-                    $path = $media->getTemporaryUrl(Carbon::now()->addMinutes(5));
-                }
+                $path = $file_disk->driver == 'local'
+                    ? $media->getPath()
+                    : $media->getTemporaryUrl(Carbon::now()->addMinutes(5));
 
                 return collect([
                     'path' => $path,
@@ -68,16 +60,13 @@ trait GeneratesPdfTrait
 
     public function generatePDF($collection_name, $file_name, $deleteExistingFile = false)
     {
-        $save_pdf_to_disk = CompanySetting::getSetting('save_pdf_to_disk',  $this->company_id);
-
+        $save_pdf_to_disk = CompanySetting::getSetting('save_pdf_to_disk', $this->company_id);
         if ($save_pdf_to_disk == 'NO') {
             return 0;
         }
 
-        $locale = CompanySetting::getSetting('language',  $this->company_id);
-
+        $locale = CompanySetting::getSetting('language', $this->company_id);
         App::setLocale($locale);
-
         $pdf = $this->getPDFData();
 
         \Storage::disk('local')->put('temp/'.$collection_name.'/'.$this->id.'/temp.pdf', $pdf->output());
@@ -87,7 +76,6 @@ trait GeneratesPdfTrait
         }
 
         $file_disk = FileDisk::whereSetAsDefault(true)->first();
-
         if ($file_disk) {
             $file_disk->setConfig();
         }
@@ -101,7 +89,6 @@ trait GeneratesPdfTrait
                 ->toMediaCollection($collection_name, config('filesystems.default'));
 
             \Storage::disk('local')->deleteDirectory('temp/'.$collection_name.'/'.$this->id);
-
             return true;
         } catch (\Exception $e) {
             return $e->getMessage();
@@ -114,6 +101,19 @@ trait GeneratesPdfTrait
         $shippingAddress = $customer->shippingAddress ?? new Address();
         $billingAddress = $customer->billingAddress ?? new Address();
         $companyAddress = $this->company->address ?? new Address();
+        $mentionBuilder = app(FrenchLegalMentionBuilder::class);
+
+        $companyLegalMentions = implode('<br>', array_map(
+            'htmlspecialchars',
+            $mentionBuilder->forCompany($this->company)
+        ));
+
+        $customerLegalMentions = implode('<br>', array_filter([
+            $customer->siren ? 'SIREN '.$customer->siren : null,
+            $customer->siret ? 'SIRET '.$customer->siret : null,
+            $customer->vat_number ? 'TVA intracommunautaire '.$customer->vat_number : null,
+            $customer->ape_code ? 'Code APE '.$customer->ape_code : null,
+        ]));
 
         $fields = [
             '{SHIPPING_ADDRESS_NAME}' => $shippingAddress->name,
@@ -140,11 +140,25 @@ trait GeneratesPdfTrait
             '{COMPANY_ADDRESS_STREET_2}' => $companyAddress->address_street_2,
             '{COMPANY_PHONE}' => $companyAddress->phone,
             '{COMPANY_ZIP_CODE}' => $companyAddress->zip,
+            '{COMPANY_LEGAL_FORM}' => $this->company->legal_form,
+            '{COMPANY_SIREN}' => $this->company->siren,
+            '{COMPANY_SIRET}' => $this->company->siret,
+            '{COMPANY_VAT_NUMBER}' => $this->company->vat_number,
+            '{COMPANY_APE_CODE}' => $this->company->ape_code,
+            '{COMPANY_RCS_CITY}' => $this->company->rcs_city,
+            '{COMPANY_LEGAL_MENTIONS}' => $companyLegalMentions,
+            '{COMPANY_IBAN}' => $this->company->iban,
+            '{COMPANY_BIC}' => $this->company->bic,
             '{CONTACT_DISPLAY_NAME}' => $customer->name,
             '{PRIMARY_CONTACT_NAME}' => $customer->contact_name,
             '{CONTACT_EMAIL}' => $customer->email,
             '{CONTACT_PHONE}' => $customer->phone,
             '{CONTACT_WEBSITE}' => $customer->website,
+            '{CUSTOMER_SIREN}' => $customer->siren,
+            '{CUSTOMER_SIRET}' => $customer->siret,
+            '{CUSTOMER_VAT_NUMBER}' => $customer->vat_number,
+            '{CUSTOMER_APE_CODE}' => $customer->ape_code,
+            '{CUSTOMER_LEGAL_MENTIONS}' => $customerLegalMentions,
         ];
 
         $customFields = $this->fields;
@@ -159,7 +173,10 @@ trait GeneratesPdfTrait
         }
 
         foreach ($fields as $key => $field) {
-            $fields[$key] = htmlspecialchars($field, ENT_QUOTES, 'UTF-8');
+            if (in_array($key, ['{COMPANY_LEGAL_MENTIONS}', '{CUSTOMER_LEGAL_MENTIONS}'], true)) {
+                continue;
+            }
+            $fields[$key] = htmlspecialchars((string) $field, ENT_QUOTES, 'UTF-8');
         }
 
         return $fields;
@@ -168,16 +185,11 @@ trait GeneratesPdfTrait
     public function getFormattedString($format)
     {
         $values = array_merge($this->getFieldsArray(), $this->getExtraFields());
-
         $str = nl2br(strtr($format, $values));
-
         $str = preg_replace('/{(.*?)}/', '', $str);
-
         $str = preg_replace("/<[^\/>]*>([\s]?)*<\/[^>]*>/", '', $str);
-
-        $str = str_replace("<p>", "", $str);
-
-        $str = str_replace("</p>", "</br>", $str);
+        $str = str_replace('<p>', '', $str);
+        $str = str_replace('</p>', '</br>', $str);
 
         return $str;
     }
