@@ -1,7 +1,9 @@
 <?php
 
+use Crater\Security\EncryptedAttribute;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -27,6 +29,31 @@ return new class extends Migration
             $table->timestamps();
             $table->unique(['company_id', 'provider', 'name']);
         });
+
+        $encrypter = app(EncryptedAttribute::class);
+
+        DB::table('companies')
+            ->select(['id', 'iban', 'bic'])
+            ->orderBy('id')
+            ->chunkById(100, function ($companies) use ($encrypter): void {
+                foreach ($companies as $company) {
+                    DB::table('companies')->where('id', $company->id)->update([
+                        'iban' => $encrypter->encrypt($company->iban),
+                        'bic' => $encrypter->encrypt($company->bic),
+                    ]);
+                }
+            });
+
+        DB::table('file_disks')
+            ->select(['id', 'credentials'])
+            ->orderBy('id')
+            ->chunkById(100, function ($disks) use ($encrypter): void {
+                foreach ($disks as $disk) {
+                    DB::table('file_disks')->where('id', $disk->id)->update([
+                        'credentials' => $encrypter->encrypt($disk->credentials),
+                    ]);
+                }
+            });
     }
 
     public function down(): void
