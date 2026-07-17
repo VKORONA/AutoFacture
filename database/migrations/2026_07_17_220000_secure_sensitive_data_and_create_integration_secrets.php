@@ -21,12 +21,13 @@ return new class extends Migration
 
         Schema::create('integration_secrets', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->unsignedInteger('company_id');
             $table->string('provider', 80);
             $table->string('name', 120)->default('default');
             $table->longText('secret');
             $table->timestamp('last_used_at')->nullable();
             $table->timestamps();
+            $table->foreign('company_id')->references('id')->on('companies')->cascadeOnDelete();
             $table->unique(['company_id', 'provider', 'name']);
         });
 
