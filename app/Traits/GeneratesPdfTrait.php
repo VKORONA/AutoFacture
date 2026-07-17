@@ -13,16 +13,21 @@ trait GeneratesPdfTrait
 {
     public function getGeneratedPDFOrStream($collection_name)
     {
-        $pdf = $this->getGeneratedPDF($collection_name);
-        if ($pdf && file_exists($pdf['path'])) {
-            return response()->make(file_get_contents($pdf['path']), 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="'.$pdf['file_name'].'"',
-            ]);
+        $generatedPdf = $this->getGeneratedPDF($collection_name);
+
+        if ($generatedPdf && $generatedPdf['path']) {
+            $contents = @file_get_contents($generatedPdf['path']);
+
+            if ($contents !== false) {
+                return response()->make($contents, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="'.$generatedPdf['file_name'].'"',
+                ]);
+            }
         }
 
         $locale = CompanySetting::getSetting('language', $this->company_id);
-        App::setLocale($locale);
+        App::setLocale($locale ?: config('app.locale'));
         $pdf = $this->getPDFData();
 
         return response()->make($pdf->stream(), 200, [
@@ -35,63 +40,73 @@ trait GeneratesPdfTrait
     {
         try {
             $media = $this->getMedia($collection_name)->first();
-            if ($media) {
-                $file_disk = FileDisk::find($media->custom_properties['file_disk_id']);
-                if (! $file_disk) {
-                    return false;
-                }
 
-                $file_disk->setConfig();
-                $path = $file_disk->driver == 'local'
-                    ? $media->getPath()
-                    : $media->getTemporaryUrl(Carbon::now()->addMinutes(5));
-
-                return collect([
-                    'path' => $path,
-                    'file_name' => $media->file_name,
-                ]);
+            if (! $media) {
+                return false;
             }
-        } catch (\Exception $e) {
+
+            $fileDiskId = $media->custom_properties['file_disk_id'] ?? null;
+            $fileDisk = $fileDiskId ? FileDisk::find($fileDiskId) : null;
+
+            if (! $fileDisk) {
+                return false;
+            }
+
+            $fileDisk->setConfig();
+            $path = $fileDisk->driver === 'local'
+                ? $media->getPath()
+                : $media->getTemporaryUrl(Carbon::now()->addMinutes(5));
+
+            return collect([
+                'path' => $path,
+                'file_name' => $media->file_name,
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
             return false;
         }
-
-        return false;
     }
 
     public function generatePDF($collection_name, $file_name, $deleteExistingFile = false)
     {
-        $save_pdf_to_disk = CompanySetting::getSetting('save_pdf_to_disk', $this->company_id);
-        if ($save_pdf_to_disk == 'NO') {
+        $savePdfToDisk = CompanySetting::getSetting('save_pdf_to_disk', $this->company_id);
+
+        if ($savePdfToDisk === 'NO') {
             return 0;
         }
 
-        $locale = CompanySetting::getSetting('language', $this->company_id);
-        App::setLocale($locale);
-        $pdf = $this->getPDFData();
+        $fileDisk = FileDisk::whereSetAsDefault(true)->first();
 
-        \Storage::disk('local')->put('temp/'.$collection_name.'/'.$this->id.'/temp.pdf', $pdf->output());
+        if (! $fileDisk) {
+            return 'Aucun stockage de fichiers par défaut n’est configuré.';
+        }
+
+        $locale = CompanySetting::getSetting('language', $this->company_id);
+        App::setLocale($locale ?: config('app.locale'));
+        $pdf = $this->getPDFData();
+        $temporaryDirectory = 'temp/'.$collection_name.'/'.$this->id;
+        $temporaryPath = $temporaryDirectory.'/temp.pdf';
+
+        \Storage::disk('local')->put($temporaryPath, $pdf->output());
 
         if ($deleteExistingFile) {
-            $this->clearMediaCollection($this->id);
+            $this->clearMediaCollection($collection_name);
         }
 
-        $file_disk = FileDisk::whereSetAsDefault(true)->first();
-        if ($file_disk) {
-            $file_disk->setConfig();
-        }
-
-        $media = \Storage::disk('local')->path('temp/'.$collection_name.'/'.$this->id.'/temp.pdf');
+        $fileDisk->setConfig();
+        $media = \Storage::disk('local')->path($temporaryPath);
 
         try {
             $this->addMedia($media)
-                ->withCustomProperties(['file_disk_id' => $file_disk->id])
+                ->withCustomProperties(['file_disk_id' => $fileDisk->id])
                 ->usingFileName($file_name.'.pdf')
                 ->toMediaCollection($collection_name, config('filesystems.default'));
 
-            \Storage::disk('local')->deleteDirectory('temp/'.$collection_name.'/'.$this->id);
+            \Storage::disk('local')->deleteDirectory($temporaryDirectory);
             return true;
-        } catch (\Exception $e) {
-            return $e->getMessage();
+        } catch (\Throwable $exception) {
+            report($exception);
+            return $exception->getMessage();
         }
     }
 
@@ -103,17 +118,21 @@ trait GeneratesPdfTrait
         $companyAddress = $this->company->address ?? new Address();
         $mentionBuilder = app(FrenchLegalMentionBuilder::class);
 
+        $escape = static function ($value): string {
+            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+        };
+
         $companyLegalMentions = implode('<br>', array_map(
-            'htmlspecialchars',
+            $escape,
             $mentionBuilder->forCompany($this->company)
         ));
 
-        $customerLegalMentions = implode('<br>', array_filter([
+        $customerLegalMentions = implode('<br>', array_map($escape, array_filter([
             $customer->siren ? 'SIREN '.$customer->siren : null,
             $customer->siret ? 'SIRET '.$customer->siret : null,
             $customer->vat_number ? 'TVA intracommunautaire '.$customer->vat_number : null,
             $customer->ape_code ? 'Code APE '.$customer->ape_code : null,
-        ]));
+        ])));
 
         $fields = [
             '{SHIPPING_ADDRESS_NAME}' => $shippingAddress->name,
@@ -161,14 +180,11 @@ trait GeneratesPdfTrait
             '{CUSTOMER_LEGAL_MENTIONS}' => $customerLegalMentions,
         ];
 
-        $customFields = $this->fields;
-        $customerCustomFields = $this->customer->fields;
-
-        foreach ($customFields as $customField) {
+        foreach ($this->fields as $customField) {
             $fields['{'.$customField->customField->slug.'}'] = $customField->defaultAnswer;
         }
 
-        foreach ($customerCustomFields as $customField) {
+        foreach ($customer->fields as $customField) {
             $fields['{'.$customField->customField->slug.'}'] = $customField->defaultAnswer;
         }
 
@@ -176,7 +192,8 @@ trait GeneratesPdfTrait
             if (in_array($key, ['{COMPANY_LEGAL_MENTIONS}', '{CUSTOMER_LEGAL_MENTIONS}'], true)) {
                 continue;
             }
-            $fields[$key] = htmlspecialchars((string) $field, ENT_QUOTES, 'UTF-8');
+
+            $fields[$key] = $escape($field);
         }
 
         return $fields;
@@ -185,12 +202,11 @@ trait GeneratesPdfTrait
     public function getFormattedString($format)
     {
         $values = array_merge($this->getFieldsArray(), $this->getExtraFields());
-        $str = nl2br(strtr($format, $values));
-        $str = preg_replace('/{(.*?)}/', '', $str);
-        $str = preg_replace("/<[^\/>]*>([\s]?)*<\/[^>]*>/", '', $str);
-        $str = str_replace('<p>', '', $str);
-        $str = str_replace('</p>', '</br>', $str);
+        $string = nl2br(strtr($format, $values));
+        $string = preg_replace('/{(.*?)}/', '', $string);
+        $string = preg_replace("/<[^\/>]*>([\s]?)*<\/[^>]*>/", '', $string);
+        $string = str_replace('<p>', '', $string);
 
-        return $str;
+        return str_replace('</p>', '</br>', $string);
     }
 }
