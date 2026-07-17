@@ -11,17 +11,13 @@ use Illuminate\Support\Facades\Auth;
 
 class ExpensesController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function index(Request $request)
     {
-        $limit = $request->has('limit') ? $request->limit : 10;
+        $customerId = (int) Auth::guard('customer')->id();
+        $limit = $request->input('limit', 10);
 
-        $expenses = Expense::with('category', 'creator', 'fields')
-            ->whereUser(Auth::guard('customer')->id())
+        $expenses = Expense::with(['category', 'creator', 'fields'])
+            ->where('customer_id', $customerId)
             ->applyFilters($request->only([
                 'expense_category_id',
                 'from_date',
@@ -31,23 +27,17 @@ class ExpensesController extends Controller
             ]))
             ->paginateData($limit);
 
-        return (ExpenseResource::collection($expenses))
+        return ExpenseResource::collection($expenses)
             ->additional(['meta' => [
-                'expenseTotalCount' => Expense::whereCustomer(Auth::guard('customer')->id())->count(),
+                'expenseTotalCount' => Expense::where('customer_id', $customerId)->count(),
             ]]);
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \Crater\Models\Expense  $expense
-     * @return \Illuminate\Http\Response
-     */
     public function show(Company $company, $id)
     {
         $expense = $company->expenses()
-            ->whereUser(Auth::guard('customer')->id())
-            ->where('id', $id)
+            ->where('customer_id', Auth::guard('customer')->id())
+            ->whereKey($id)
             ->first();
 
         if (! $expense) {
