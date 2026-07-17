@@ -54,6 +54,13 @@ Le code, les routes et les tables ne sont pas supprimés. La réponse du bootstr
 
 Cette solution permet de réactiver une fonction sans migration ni perte de données.
 
-## Limite temporaire
+## Protection des accès directs
 
-Le masquage de menu n'est pas une autorisation de sécurité. Une route existante peut encore être atteinte directement par un utilisateur disposant des permissions Crater correspondantes. Un garde de fonctionnalité côté serveur sera ajouté avant la bêta pour bloquer aussi les routes des fonctions désactivées.
+Le middleware global `EnsureFeatureIsEnabled` vérifie chaque requête avant son traitement.
+
+- Une page d'administration désactivée redirige vers `/admin/dashboard`.
+- Une route API désactivée répond en JSON avec le statut HTTP 404 et le code `FEATURE_DISABLED`.
+- Les motifs d'URL protégés sont centralisés dans `config/autofacture.php`.
+- Les tests couvrent une fonction active, une API désactivée, une page admin désactivée et un paramètre avancé désactivé.
+
+Le masquage du menu et le blocage serveur utilisent donc la même source de configuration.
