@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedInteger('company_id');
             $table->unsignedInteger('invoice_id');
-            $table->unsignedInteger('customer_id');
+            $table->unsignedBigInteger('customer_id');
             $table->unsignedInteger('creator_id')->nullable();
             $table->unsignedInteger('currency_id');
             $table->string('credit_note_number', 40);
