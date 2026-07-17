@@ -2,6 +2,7 @@
 
 namespace Crater\Domain\Invoicing;
 
+use Crater\Models\Company;
 use Crater\Models\CreditNote;
 use Crater\Models\Invoice;
 use Crater\Models\User;
@@ -34,7 +35,11 @@ class CreditNoteIssuer
                 throw new DomainException("Le montant de l’avoir doit être compris entre 1 et {$remaining} centimes.");
             }
 
-            $sequence = (int) CreditNote::query()->max('sequence_number') + 1;
+            Company::query()->whereKey($invoice->company_id)->lockForUpdate()->firstOrFail();
+
+            $sequence = (int) CreditNote::withoutGlobalScopes()
+                ->where('company_id', $invoice->company_id)
+                ->max('sequence_number') + 1;
             $number = 'AV-'.str_pad((string) $sequence, 6, '0', STR_PAD_LEFT);
             $subTotal = $amount === (int) $invoice->total
                 ? (int) $invoice->sub_total
