@@ -2,6 +2,7 @@
 
 namespace Crater\Tenancy;
 
+use Closure;
 use LogicException;
 
 class CompanyContext
@@ -39,5 +40,17 @@ class CompanyContext
     public function idOrNull(): ?int
     {
         return $this->companyId;
+    }
+
+    public function runWith(int $companyId, Closure $callback): mixed
+    {
+        $previousCompanyId = $this->companyId;
+        $this->set($companyId);
+
+        try {
+            return $callback();
+        } finally {
+            $this->companyId = $previousCompanyId;
+        }
     }
 }
