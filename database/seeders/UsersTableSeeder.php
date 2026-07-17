@@ -15,18 +15,40 @@ class UsersTableSeeder extends Seeder
 {
     public function run()
     {
-        $user = User::create([
-            'email' => 'admin@autofacture.local',
-            'name' => 'Administrateur AutoFacture',
-            'role' => 'super admin',
-            'password' => 'autofacture-dev',
-        ]);
+        $user = User::query()->where('email', 'admin@autofacture.local')->first();
 
-        $company = Company::create([
-            'name' => 'Entreprise de démonstration',
-            'owner_id' => $user->id,
-            'slug' => 'entreprise-demonstration',
-        ]);
+        if (! $user) {
+            $user = new User();
+
+            if (app()->environment('testing')) {
+                $user->id = 1;
+            }
+
+            $user->fill([
+                'email' => 'admin@autofacture.local',
+                'name' => 'Administrateur AutoFacture',
+                'role' => 'super admin',
+                'password' => 'autofacture-dev',
+            ]);
+            $user->save();
+        }
+
+        $company = Company::query()->where('slug', 'entreprise-demonstration')->first();
+
+        if (! $company) {
+            $company = new Company();
+
+            if (app()->environment('testing')) {
+                $company->id = 1;
+            }
+
+            $company->fill([
+                'name' => 'Entreprise de démonstration',
+                'owner_id' => $user->id,
+                'slug' => 'entreprise-demonstration',
+            ]);
+            $company->save();
+        }
 
         $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
         $company->save();
@@ -35,7 +57,7 @@ class UsersTableSeeder extends Seeder
         $euroId = Currency::where('code', 'EUR')->value('id');
         app(FrenchCompanyDefaults::class)->apply($company, $euroId);
 
-        $user->companies()->attach($company->id);
+        $user->companies()->syncWithoutDetaching([$company->id]);
         BouncerFacade::scope()->to($company->id);
         $user->assign('super admin');
 
