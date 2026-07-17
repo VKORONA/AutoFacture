@@ -6,6 +6,7 @@ use Crater\Models\Company;
 use Crater\Models\FileDisk;
 use Crater\Security\EncryptedAttribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 class SensitiveDataServiceProvider extends ServiceProvider
@@ -32,6 +33,10 @@ class SensitiveDataServiceProvider extends ServiceProvider
             $raw = $model->getAttributes();
 
             foreach ($attributes as $attribute) {
+                if (! $this->columnCanStoreEncryptedPayload($model, $attribute)) {
+                    continue;
+                }
+
                 $value = $raw[$attribute] ?? null;
                 $raw[$attribute] = $encrypter->encrypt($value === null ? null : (string) $value);
             }
@@ -48,5 +53,16 @@ class SensitiveDataServiceProvider extends ServiceProvider
 
             $model->setRawAttributes($raw, true);
         });
+    }
+
+    private function columnCanStoreEncryptedPayload(Model $model, string $attribute): bool
+    {
+        $table = $model->getTable();
+
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $attribute)) {
+            return false;
+        }
+
+        return Schema::getColumnType($table, $attribute) !== 'json';
     }
 }
