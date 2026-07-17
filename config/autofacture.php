@@ -92,7 +92,6 @@ return [
     ],
 
     'settings_route_patterns' => [
-        // Les API rôles/abilities restent accessibles car l'écran Utilisateurs en dépend.
         'roles' => [
             'admin/settings/roles-settings*',
         ],
@@ -105,7 +104,6 @@ return [
             'api/v1/currencies/*/active-provider*',
             'api/v1/currencies/bulk-update-exchange-rate*',
         ],
-        // L'API de lecture reste disponible tant que les formulaires historiques la sollicitent.
         'custom_fields' => [
             'admin/settings/custom-fields*',
         ],
@@ -132,6 +130,16 @@ return [
             'admin/settings/update-app*',
             'api/v1/check/update*',
             'api/v1/update/*',
+        ],
+    ],
+
+    // Les lectures GET restent disponibles pour les formulaires historiques.
+    'settings_write_route_patterns' => [
+        'roles' => [
+            'api/v1/roles*',
+        ],
+        'custom_fields' => [
+            'api/v1/custom-fields*',
         ],
     ],
 ];
