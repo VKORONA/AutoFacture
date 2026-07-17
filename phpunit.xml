@@ -20,6 +20,7 @@
     <php>
         <server name="APP_ENV" value="testing"/>
         <server name="APP_DEBUG" value="true"/>
+        <server name="APP_FAKER_LOCALE" value="en_US"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
         <server name="CACHE_STORE" value="array"/>
         <server name="MAIL_MAILER" value="array"/>
