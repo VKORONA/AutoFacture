@@ -19,17 +19,23 @@ Le développement du MVP se déroule sur la branche :
 develop/mvp-france-ai
 ```
 
-Le périmètre et les décisions techniques sont documentés dans le dossier [`docs`](docs).
+Cette branche reste une branche de développement. Elle n'est pas encore prête pour des données clients réelles.
 
 ## Installation de développement
 
 Consultez :
 
 - [`docs/local-development.md`](docs/local-development.md)
-- [`docs/day-1-audit.md`](docs/day-1-audit.md)
+- [`docs/coherence-audit-2026-07-17.md`](docs/coherence-audit-2026-07-17.md)
 - [`docs/mvp-scope.md`](docs/mvp-scope.md)
 
-Après installation et migration, les paramètres français peuvent être appliqués avec :
+Après `php artisan migrate --seed`, finalisez l'installation locale avec :
+
+```bash
+php artisan autofacture:bootstrap-local
+```
+
+Pour réappliquer seulement les paramètres français à des entreprises existantes :
 
 ```bash
 php artisan autofacture:apply-french-defaults
