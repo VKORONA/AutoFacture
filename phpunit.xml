@@ -25,6 +25,19 @@
         <server name="MAIL_MAILER" value="array"/>
         <server name="QUEUE_CONNECTION" value="sync"/>
         <server name="SESSION_DRIVER" value="array"/>
-        <server name="APP_URL" value="http://crater.test"/>
+        <server name="APP_URL" value="http://autofacture.test"/>
+
+        <!-- Le code historique reste testé même lorsque les menus sont masqués dans le MVP. -->
+        <server name="FEATURE_RECURRING_INVOICES" value="true"/>
+        <server name="FEATURE_EXPENSES" value="true"/>
+        <server name="FEATURE_REPORTS" value="true"/>
+        <server name="FEATURE_MODULES" value="true"/>
+        <server name="FEATURE_ADVANCED_ROLES" value="true"/>
+        <server name="FEATURE_EXCHANGE_RATES" value="true"/>
+        <server name="FEATURE_CUSTOM_FIELDS" value="true"/>
+        <server name="FEATURE_IN_APP_UPDATE" value="true"/>
+        <server name="FEATURE_MAIL_CONFIGURATION" value="true"/>
+        <server name="FEATURE_FILE_DISK" value="true"/>
+        <server name="FEATURE_BACKUP" value="true"/>
     </php>
 </phpunit>
