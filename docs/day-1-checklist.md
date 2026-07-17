@@ -10,10 +10,12 @@
 - [x] CI backend/frontend ajoutée.
 - [x] Périmètre MVP figé.
 - [x] Base de sécurité documentée.
+- [x] Menus et routes cartographiés.
+- [x] Fonctions hors MVP masquées par indicateurs, sans suppression de code ni de données.
 - [ ] Exécuter l'installation Docker sur un poste Windows.
 - [ ] Copier les résultats de `composer audit` et `npm audit` dans l'issue technique.
 - [ ] Exécuter les tests existants.
 - [ ] Vérifier l'assistant d'installation dans le navigateur.
-- [ ] Cartographier précisément les menus à masquer sans supprimer de code.
+- [ ] Ajouter avant la bêta un garde serveur bloquant l'accès direct aux routes désactivées.
 
-Les cinq derniers contrôles nécessitent une machine capable d'exécuter Docker, PHP, Composer et Node. Ils seront traités avant le début du jour 2.
+Les contrôles non cochés nécessitent une machine capable d'exécuter Docker, PHP, Composer et Node, ou appartiennent à la sécurisation avant bêta.
