@@ -24,19 +24,15 @@ function get_app_setting($key)
 function get_page_title($company_id)
 {
     $routeName = Route::currentRouteName();
-    $pageTitle = null;
     $defaultPageTitle = 'AutoFacture - Devis et facturation';
 
     if (\Storage::disk('local')->has('database_created')) {
         if ($routeName === 'customer.dashboard') {
-            $pageTitle = CompanySetting::getSetting('customer_portal_page_title', $company_id);
-
-            return $pageTitle ?: $defaultPageTitle;
+            return CompanySetting::getSetting('customer_portal_page_title', $company_id)
+                ?: $defaultPageTitle;
         }
 
-        $pageTitle = Setting::getSetting('admin_page_title');
-
-        return $pageTitle ?: $defaultPageTitle;
+        return Setting::getSetting('admin_page_title') ?: $defaultPageTitle;
     }
 
     return $defaultPageTitle;
@@ -69,7 +65,8 @@ function format_money_pdf($money, $currency = null)
     $money /= 100;
 
     if (! $currency) {
-        $companyId = app(\Crater\Tenancy\CompanyContext::class)->idOrNull() ?: request()->header('company');
+        $companyId = app(\Crater\Tenancy\CompanyContext::class)->idOrNull()
+            ?: request()->header('company');
         $currency = Currency::findOrFail(CompanySetting::getSetting('currency', $companyId));
     }
 
@@ -122,6 +119,17 @@ function respondJson($error, $message)
         'error' => $error,
         'message' => $message,
     ], 422);
+}
+
+/*
+ * Compatibilité temporaire avec les anciennes factories Crater. Les nouveaux
+ * composants doivent utiliser Str::random() directement.
+ */
+if (! function_exists('str_random')) {
+    function str_random(int $length = 16): string
+    {
+        return Str::random($length);
+    }
 }
 
 if (! function_exists('vite_asset')) {
