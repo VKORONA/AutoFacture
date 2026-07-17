@@ -21,6 +21,11 @@ class CreditNoteIssuer
     {
         return DB::transaction(function () use ($invoice, $reason, $requestedAmount, $user): CreditNote {
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+
+            if (! $invoice->finalized_at && $invoice->status === Invoice::STATUS_DRAFT) {
+                throw new DomainException('Un avoir ne peut être émis que sur une facture déjà finalisée ou envoyée.');
+            }
+
             $invoice = $this->finalizer->finalize($invoice, $user);
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
 
