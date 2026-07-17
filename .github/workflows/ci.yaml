@@ -55,9 +55,21 @@ jobs:
           DB_DATABASE: database/database.sqlite
           SESSION_DRIVER: array
         run: |
-          php artisan about --only=environment
-          php artisan migrate --force
-          php artisan test
+          set -o pipefail
+          php artisan about --only=environment 2>&1 | tee artisan-about.log
+          php artisan migrate --force 2>&1 | tee migrations.log
+          php artisan test 2>&1 | tee tests.log
+      - name: Publier les journaux Laravel
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: laravel-runtime
+          path: |
+            artisan-about.log
+            migrations.log
+            tests.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Format AutoFacture
         run: vendor/bin/pint --test app/Domain/Invoicing app/Tenancy app/Security app/Providers/TenancyServiceProvider.php app/Providers/SensitiveDataServiceProvider.php app/Providers/InvoiceIntegrityServiceProvider.php app/Models/CreditNote.php app/Models/CreditNoteItem.php app/Models/IntegrationSecret.php
       - name: Analyse statique ciblée
