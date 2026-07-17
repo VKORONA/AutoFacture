@@ -79,6 +79,19 @@ jobs:
       - name: Récupérer le dépôt
         uses: actions/checkout@v4
 
+      - name: Installer PHP pour Laravel Vite
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, openssl, pdo_sqlite, tokenizer, xml, zip
+          coverage: none
+
+      - name: Préparer Laravel pour Vite
+        run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
@@ -87,7 +100,15 @@ jobs:
       - name: Installer les dépendances frontend historiques
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Auditer le lint historique
+      - name: Vérifier les fichiers frontend modifiés par AutoFacture
+        run: >-
+          npx eslint
+          resources/scripts/admin/views/customers/Create.vue
+          resources/scripts/admin/views/settings/CompanyInfoSettings.vue
+          resources/scripts/components/icons/MainLogo.vue
+          resources/scripts/admin/stub/customer.js
+
+      - name: Auditer le lint historique complet
         continue-on-error: true
         run: |
           set -o pipefail
