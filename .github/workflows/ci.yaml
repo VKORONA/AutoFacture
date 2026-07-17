@@ -120,9 +120,23 @@ jobs:
         run: npx eslint resources/scripts/admin/views/customers/Create.vue resources/scripts/admin/views/settings/CompanyInfoSettings.vue resources/scripts/components/icons/MainLogo.vue resources/scripts/admin/stub/customer.js
       - name: Dette de lint Crater historique
         continue-on-error: true
-        run: npm run test
+        run: |
+          set -o pipefail
+          npm run test 2>&1 | tee frontend-lint.log
       - name: Construire le frontend
-        run: npm run build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee frontend-build.log
+      - name: Publier les journaux frontend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-runtime
+          path: |
+            frontend-lint.log
+            frontend-build.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Audit dépendances NPM
         if: always()
         run: npm audit --omit=dev || true
