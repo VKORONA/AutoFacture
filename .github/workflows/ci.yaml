@@ -34,9 +34,21 @@ jobs:
           touch database/database.sqlite
       - name: Installer Composer
         run: |
-          composer validate --no-check-publish
-          composer install --no-interaction --prefer-dist --no-progress
-          php artisan key:generate
+          set -o pipefail
+          composer validate --no-check-publish 2>&1 | tee composer-validate.log
+          composer install --no-interaction --prefer-dist --no-progress 2>&1 | tee composer-install.log
+          php artisan key:generate 2>&1 | tee artisan-bootstrap.log
+      - name: Publier les journaux Composer
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: composer-bootstrap
+          path: |
+            composer-validate.log
+            composer-install.log
+            artisan-bootstrap.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Migrer et tester
         env:
           DB_CONNECTION: sqlite
