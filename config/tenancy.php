@@ -9,7 +9,6 @@ use Crater\Models\ExchangeRateLog;
 use Crater\Models\ExchangeRateProvider;
 use Crater\Models\Expense;
 use Crater\Models\ExpenseCategory;
-use Crater\Models\FileDisk;
 use Crater\Models\IntegrationSecret;
 use Crater\Models\Invoice;
 use Crater\Models\Item;
@@ -31,7 +30,6 @@ return [
         ExchangeRateProvider::class,
         Expense::class,
         ExpenseCategory::class,
-        FileDisk::class,
         IntegrationSecret::class,
         Invoice::class,
         Item::class,
