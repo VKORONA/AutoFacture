@@ -19,7 +19,7 @@ it('laisse passer une fonction active', function () {
         ->and($response->getData(true))->toMatchArray(['ok' => true]);
 });
 
-it('bloque une fonction api désactivée sans révéler la route', function () {
+it('bloque une fonction api entièrement désactivée', function () {
     config()->set('autofacture.features.expenses', false);
 
     $request = Request::create('/api/v1/expenses', 'GET');
@@ -51,10 +51,24 @@ it('redirige une page admin désactivée vers le tableau de bord', function () {
         ->and($response->headers->get('Location'))->toEndWith('/admin/dashboard');
 });
 
-it('bloque aussi les paramètres avancés désactivés', function () {
+it('laisse lire les rôles nécessaires à l’écran utilisateurs', function () {
     config()->set('autofacture.settings_features.roles', false);
 
     $request = Request::create('/api/v1/roles', 'GET');
+    $request->headers->set('Accept', 'application/json');
+
+    $response = app(EnsureFeatureIsEnabled::class)->handle(
+        $request,
+        fn () => response()->json(['ok' => true])
+    );
+
+    expect($response->getStatusCode())->toBe(Response::HTTP_OK);
+});
+
+it('bloque l’écriture des rôles avancés désactivés', function () {
+    config()->set('autofacture.settings_features.roles', false);
+
+    $request = Request::create('/api/v1/roles', 'POST');
     $request->headers->set('Accept', 'application/json');
 
     $response = app(EnsureFeatureIsEnabled::class)->handle(
