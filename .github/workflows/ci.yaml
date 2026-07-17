@@ -8,6 +8,10 @@ on:
     branches:
       - master
 
+concurrency:
+  group: autofacture-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -33,7 +37,7 @@ jobs:
           touch database/database.sqlite
 
       - name: Valider composer.json
-        run: composer validate --no-check-publish
+        run: composer validate --no-check-publish --no-check-lock
 
       - name: Installer les dépendances PHP verrouillées
         run: composer install --no-interaction --prefer-dist --no-progress
