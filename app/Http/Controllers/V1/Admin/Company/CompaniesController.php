@@ -8,35 +8,50 @@ use Crater\Http\Requests\CompaniesRequest;
 use Crater\Http\Resources\CompanyResource;
 use Crater\Models\Company;
 use Crater\Models\User;
+use Crater\Tenancy\CompanyContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Silber\Bouncer\BouncerFacade;
 use Vinkla\Hashids\Facades\Hashids;
 
 class CompaniesController extends Controller
 {
-    public function store(CompaniesRequest $request, FrenchCompanyDefaults $defaults)
-    {
+    public function store(
+        CompaniesRequest $request,
+        FrenchCompanyDefaults $defaults,
+        CompanyContext $context
+    ) {
         $this->authorize('create company');
 
-        $user = $request->user();
-        $company = Company::create($request->getCompanyPayload());
-        $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
-        $company->save();
-        $company->setupDefaultData();
-        $defaults->apply($company, $request->currency);
-        $user->companies()->attach($company->id);
-        $user->assign('super admin');
+        $company = DB::transaction(function () use ($request, $defaults, $context): Company {
+            $user = $request->user();
+            $company = Company::create($request->getCompanyPayload());
+            $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
+            $company->save();
 
-        if ($request->address) {
-            $company->address()->create($request->address);
-        }
+            $context->runWith($company->id, function () use ($request, $defaults, $user, $company): void {
+                $company->setupDefaultData();
+                $defaults->apply($company, $request->integer('currency'));
+                $user->companies()->syncWithoutDetaching([$company->id]);
+                BouncerFacade::scope()->to($company->id);
+                $user->assign('super admin');
 
-        return new CompanyResource($company);
+                if ($request->address) {
+                    $company->address()->create($request->address);
+                }
+            });
+
+            return $company;
+        });
+
+        return (new CompanyResource($company->fresh()))
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function destroy(Request $request)
     {
-        $company = Company::find($request->header('company'));
+        $company = Company::findOrFail($request->header('company'));
         $this->authorize('delete company', $company);
         $user = $request->user();
 
@@ -55,14 +70,14 @@ class CompaniesController extends Controller
 
     public function transferOwnership(Request $request, User $user)
     {
-        $company = Company::find($request->header('company'));
+        $company = Company::findOrFail($request->header('company'));
         $this->authorize('transfer company ownership', $company);
 
-        if ($user->hasCompany($company->id)) {
+        if (! $user->hasCompany($company->id)) {
             return response()->json([
                 'success' => false,
-                'message' => 'User does not belongs to this company.',
-            ]);
+                'message' => 'User does not belong to this company.',
+            ], 422);
         }
 
         $company->update(['owner_id' => $user->id]);
