@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Crater\Domain\FrenchInvoicing\FrenchCompanyDefaults;
 use Crater\Models\Company;
 use Crater\Models\Setting;
 use Crater\Models\User;
@@ -11,32 +12,27 @@ use Vinkla\Hashids\Facades\Hashids;
 
 class UsersTableSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
     public function run()
     {
         $user = User::create([
-            'email' => 'admin@craterapp.com',
-            'name' => 'Jane Doe',
+            'email' => 'admin@autofacture.local',
+            'name' => 'Administrateur AutoFacture',
             'role' => 'super admin',
-            'password' => 'crater@123',
+            'password' => 'autofacture-dev',
         ]);
 
         $company = Company::create([
-            'name' => 'xyz',
+            'name' => 'Entreprise de démonstration',
             'owner_id' => $user->id,
-            'slug' => 'xyz'
+            'slug' => 'entreprise-demonstration',
         ]);
 
         $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
         $company->save();
         $company->setupDefaultData();
+        app(FrenchCompanyDefaults::class)->apply($company);
         $user->companies()->attach($company->id);
         BouncerFacade::scope()->to($company->id);
-
         $user->assign('super admin');
 
         Setting::setSetting('profile_complete', 0);
