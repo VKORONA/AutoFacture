@@ -1,0 +1,51 @@
+name: Resolve Laravel 12 dependencies
+
+on:
+  push:
+    branches:
+      - develop/hardening-modernization
+    paths:
+      - composer.json
+      - .github/workflows/modernize-composer-lock.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: composer-modernization
+  cancel-in-progress: true
+
+jobs:
+  update-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer la branche
+        uses: actions/checkout@v4
+        with:
+          ref: develop/hardening-modernization
+
+      - name: Installer PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, intl, openssl, pdo_mysql, pdo_sqlite, tokenizer, xml, zip
+          coverage: none
+
+      - name: Résoudre toutes les dépendances
+        run: composer update --with-all-dependencies --no-interaction --prefer-dist --no-progress --no-scripts
+
+      - name: Valider le verrou
+        run: composer validate --no-check-publish
+
+      - name: Enregistrer composer.lock
+        run: |
+          if git diff --quiet composer.lock; then
+            echo "composer.lock est déjà à jour"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add composer.lock
+          git commit -m "build(framework): régénérer composer.lock pour Laravel 12 [skip lock]"
+          git push origin HEAD:develop/hardening-modernization
