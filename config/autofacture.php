@@ -3,12 +3,12 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Visibilité des fonctions dans l'interface
+    | Fonctions AutoFacture
     |--------------------------------------------------------------------------
     |
-    | Ces indicateurs masquent uniquement les entrées de menu. Les routes et
-    | les données restent intactes afin d'éviter une suppression irréversible
-    | pendant la construction du MVP.
+    | Les indicateurs pilotent à la fois la visibilité des menus et l'accès
+    | direct aux anciennes URL de Crater. Une fonction désactivée reste dans
+    | le code et la base, mais n'est plus utilisable dans le MVP.
     |
     */
     'features' => [
@@ -84,5 +84,60 @@ return [
         'File Disk' => 'file_disk',
         'Backup' => 'backup',
         'Update App' => 'update_app',
+    ],
+
+    /*
+    | Motifs Laravel Request::is() bloqués lorsque la fonction est désactivée.
+    */
+    'route_patterns' => [
+        'recurring_invoices' => [
+            'admin/recurring-invoices*',
+            'api/v1/recurring-invoice-frequency*',
+            'api/v1/recurring-invoices*',
+        ],
+        'expenses' => [
+            'admin/expenses*',
+            'api/v1/expenses*',
+            'api/v1/categories*',
+            'api/v1/*/customer/expenses*',
+        ],
+        'reports' => [
+            'admin/reports*',
+            'api/v1/reports*',
+        ],
+        'modules' => [
+            'admin/modules*',
+            'api/v1/modules*',
+        ],
+    ],
+
+    'settings_route_patterns' => [
+        'roles' => [
+            'admin/settings/roles-settings*',
+            'api/v1/roles*',
+            'api/v1/abilities*',
+        ],
+        'exchange_rate_provider' => [
+            'admin/settings/exchange-rate-provider*',
+            'api/v1/exchange-rate-providers*',
+            'api/v1/used-currencies*',
+            'api/v1/supported-currencies*',
+            'api/v1/currencies/*/exchange-rate*',
+            'api/v1/currencies/*/active-provider*',
+            'api/v1/currencies/bulk-update-exchange-rate*',
+        ],
+        'custom_fields' => [
+            'admin/settings/custom-fields*',
+            'api/v1/custom-fields*',
+        ],
+        'expense_category' => [
+            'admin/settings/expense-category*',
+            'api/v1/categories*',
+        ],
+        'update_app' => [
+            'admin/settings/update-app*',
+            'api/v1/check/update*',
+            'api/v1/update/*',
+        ],
     ],
 ];
