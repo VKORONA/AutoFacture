@@ -19,32 +19,34 @@ class SensitiveDataServiceProvider extends ServiceProvider
     private function protect(string $modelClass, array $attributes, EncryptedAttribute $encrypter): void
     {
         $modelClass::retrieved(function (Model $model) use ($attributes, $encrypter): void {
+            $raw = $model->getAttributes();
+
             foreach ($attributes as $attribute) {
-                $model->setRawAttributes(array_merge(
-                    $model->getAttributes(),
-                    [$attribute => $encrypter->decrypt($model->getAttributeFromArray($attribute))]
-                ));
+                $raw[$attribute] = $encrypter->decrypt($raw[$attribute] ?? null);
             }
+
+            $model->setRawAttributes($raw, true);
         });
 
         $modelClass::saving(function (Model $model) use ($attributes, $encrypter): void {
-            foreach ($attributes as $attribute) {
-                $value = $model->getAttributeFromArray($attribute);
+            $raw = $model->getAttributes();
 
-                if ($value !== null && $value !== '') {
-                    $model->setAttribute($attribute, $encrypter->encrypt((string) $value));
-                }
+            foreach ($attributes as $attribute) {
+                $value = $raw[$attribute] ?? null;
+                $raw[$attribute] = $encrypter->encrypt($value === null ? null : (string) $value);
             }
+
+            $model->setRawAttributes($raw);
         });
 
         $modelClass::saved(function (Model $model) use ($attributes, $encrypter): void {
+            $raw = $model->getAttributes();
+
             foreach ($attributes as $attribute) {
-                $value = $model->getAttributeFromArray($attribute);
-                $model->setRawAttributes(array_merge(
-                    $model->getAttributes(),
-                    [$attribute => $encrypter->decrypt($value)]
-                ));
+                $raw[$attribute] = $encrypter->decrypt($raw[$attribute] ?? null);
             }
+
+            $model->setRawAttributes($raw, true);
         });
     }
 }
