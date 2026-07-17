@@ -134,6 +134,8 @@ class CloneInvoiceController extends Controller
             return $newInvoice;
         });
 
-        return new InvoiceResource($newInvoice->fresh(['items.taxes', 'taxes', 'customer']));
+        return (new InvoiceResource($newInvoice->fresh(['items.taxes', 'taxes', 'customer'])))
+            ->response()
+            ->setStatusCode(201);
     }
 }
