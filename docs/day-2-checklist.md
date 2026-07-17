@@ -6,23 +6,27 @@
 - [x] Logo principal remplacé par AutoFacture.
 - [x] Migration des champs légaux français ajoutée.
 - [x] Validation serveur du SIREN, SIRET, TVA, IBAN et BIC.
+- [x] Contrôle de somme SIREN et SIRET ajouté.
 - [x] Informations légales exposées dans `CompanyResource`.
+- [x] Informations légales exposées dans `CustomerResource`.
 - [x] Formulaire entreprise enrichi avec les champs français.
 - [x] Modèle de saisie client enrichi.
 - [x] Validation serveur des identifiants clients ajoutée.
 - [x] Commande Artisan de configuration française ajoutée.
 - [x] Numérotation recommandée FAC / DEV / REG préparée.
 - [x] Fuseau Europe/Paris et formats de dates français préparés.
+- [x] Générateur de mentions légales françaises créé.
+- [x] Mention « TVA non applicable, art. 293 B du CGI » prise en charge.
+- [x] Tests unitaires SIREN, SIRET et mentions légales ajoutés.
 
 ## À poursuivre dans le jour 2
 
 - [ ] Ajouter les champs légaux au formulaire visuel de création client.
 - [ ] Ajouter les traductions françaises dédiées dans `fr.json`.
 - [ ] Vérifier la migration sur MySQL et MariaDB.
-- [ ] Ajouter des tests de validation SIREN/SIRET/TVA/IBAN.
+- [ ] Ajouter une validation complète de checksum IBAN.
 - [ ] Vérifier la persistance de tous les champs depuis l'interface.
-- [ ] Préparer les mentions françaises à afficher sur devis et factures.
-- [ ] Ajouter le cas « franchise en base de TVA » aux modèles PDF.
+- [ ] Injecter les mentions françaises dans les modèles PDF existants.
 - [ ] Ajouter l'identité légale dans les futurs snapshots Factur-X.
 
 ## Commandes de validation
