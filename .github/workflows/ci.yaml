@@ -1,37 +1,96 @@
-name: CI
+name: AutoFacture CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - develop/mvp-france-ai
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
 
 jobs:
-  build-test:
+  backend:
+    name: Backend PHP 8.1
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ['7.4', '8.0']
-
-    name: PHP ${{ matrix.php }}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: ${{ matrix.php }}
-        extensions: exif
+      - name: Installer PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, openssl, pdo_mysql, pdo_sqlite, tokenizer, xml, zip
+          coverage: none
 
-    - name: Install PHP 7 dependencies
-      run: composer update --no-interaction --no-progress
-      if: "matrix.php < 8"
+      - name: Préparer l'environnement
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
 
-    - name: Install PHP 8 dependencies
-      run: composer update --ignore-platform-req=php --no-interaction --no-progress
-      if: "matrix.php >= 8"
+      - name: Valider composer.json
+        run: composer validate --no-check-publish
 
-    - name: Check coding style
-      run: ./vendor/bin/php-cs-fixer fix -v --dry-run --using-cache=no --config=.php-cs-fixer.dist.php
+      - name: Installer les dépendances PHP verrouillées
+        run: composer install --no-interaction --prefer-dist --no-progress
 
-    - name: Unit Tests
-      run: php ./vendor/bin/pest
+      - name: Générer la clé Laravel
+        run: php artisan key:generate
+
+      - name: Vérifier les migrations SQLite
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan migrate --force
+
+      - name: Exécuter les tests PHP
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan test
+
+      - name: Inventorier les vulnérabilités PHP
+        run: composer audit || true
+
+  frontend:
+    name: Frontend Vue historique
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+
+      - name: Installer les dépendances frontend historiques
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Vérifier le code frontend
+        run: npm run test
+
+      - name: Construire le frontend
+        run: npm run build
+
+      - name: Inventorier les vulnérabilités NPM
+        run: npm audit --omit=dev || true
+
+  docker:
+    name: Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Valider Docker Compose
+        run: docker compose config --quiet
+
+      - name: Construire l'image applicative
+        run: docker compose build app
