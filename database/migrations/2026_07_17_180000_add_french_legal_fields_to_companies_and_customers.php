@@ -9,27 +9,27 @@ class AddFrenchLegalFieldsToCompaniesAndCustomers extends Migration
     public function up()
     {
         Schema::table('companies', function (Blueprint $table) {
-            $table->string('legal_form', 40)->nullable()->after('name');
-            $table->string('siren', 9)->nullable()->index()->after('legal_form');
-            $table->string('siret', 14)->nullable()->index()->after('siren');
-            $table->string('vat_number', 20)->nullable()->after('siret');
-            $table->string('ape_code', 8)->nullable()->after('vat_number');
-            $table->string('rcs_city', 100)->nullable()->after('ape_code');
-            $table->decimal('share_capital', 15, 2)->nullable()->after('rcs_city');
-            $table->string('iban', 34)->nullable()->after('share_capital');
-            $table->string('bic', 11)->nullable()->after('iban');
-            $table->string('vat_regime', 40)->default('standard')->after('bic');
-            $table->boolean('vat_exempt')->default(false)->after('vat_regime');
-            $table->string('electronic_invoicing_email')->nullable()->after('vat_exempt');
+            $table->string('legal_form', 40)->nullable();
+            $table->string('siren', 9)->nullable()->index();
+            $table->string('siret', 14)->nullable()->index();
+            $table->string('vat_number', 20)->nullable();
+            $table->string('ape_code', 8)->nullable();
+            $table->string('rcs_city', 100)->nullable();
+            $table->decimal('share_capital', 15, 2)->nullable();
+            $table->string('iban', 34)->nullable();
+            $table->string('bic', 11)->nullable();
+            $table->string('vat_regime', 40)->default('standard');
+            $table->boolean('vat_exempt')->default(false);
+            $table->string('electronic_invoicing_email')->nullable();
         });
 
         Schema::table('customers', function (Blueprint $table) {
-            $table->string('customer_type', 20)->default('business')->after('name');
-            $table->string('siren', 9)->nullable()->index()->after('company_name');
-            $table->string('siret', 14)->nullable()->index()->after('siren');
-            $table->string('vat_number', 20)->nullable()->after('siret');
-            $table->string('ape_code', 8)->nullable()->after('vat_number');
-            $table->string('electronic_invoicing_email')->nullable()->after('email');
+            $table->string('customer_type', 20)->default('business');
+            $table->string('siren', 9)->nullable()->index();
+            $table->string('siret', 14)->nullable()->index();
+            $table->string('vat_number', 20)->nullable();
+            $table->string('ape_code', 8)->nullable();
+            $table->string('electronic_invoicing_email')->nullable();
         });
     }
 
