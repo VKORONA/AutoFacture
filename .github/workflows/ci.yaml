@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - develop/mvp-france-ai
+      - develop/hardening-modernization
   pull_request:
     branches:
       - master
+      - develop/mvp-france-ai
 
 concurrency:
   group: autofacture-ci-${{ github.ref }}
@@ -17,143 +19,81 @@ permissions:
 
 jobs:
   backend:
-    name: Backend PHP 8.1
+    name: Backend Laravel 12 PHP 8.4
     runs-on: ubuntu-latest
-
     steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
-      - name: Installer PHP
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, openssl, pdo_mysql, pdo_sqlite, tokenizer, xml, zip
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, intl, openssl, pdo_mysql, pdo_sqlite, tokenizer, xml, zip
           coverage: none
-
-      - name: Préparer l'environnement
+      - name: Préparer SQLite
         run: |
           cp .env.example .env
           touch database/database.sqlite
-
-      - name: Valider composer.json
-        run: composer validate --no-check-publish --no-check-lock
-
-      - name: Installer les dépendances PHP verrouillées
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Générer la clé Laravel
-        run: php artisan key:generate
-
-      - name: Vérifier les migrations SQLite
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
-        run: php artisan migrate --force
-
-      - name: Exécuter les tests PHP
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
+      - name: Installer Composer
         run: |
-          set -o pipefail
-          php artisan test 2>&1 | tee backend-tests.log
-
-      - name: Publier le journal PHP
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-tests
-          path: backend-tests.log
-          retention-days: 7
-
-      - name: Inventorier les vulnérabilités PHP
+          composer validate --no-check-publish
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+      - name: Migrer et tester
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+          SESSION_DRIVER: array
+        run: |
+          php artisan about --only=environment
+          php artisan migrate --force
+          php artisan test
+      - name: Format AutoFacture
+        run: vendor/bin/pint --test app/Domain/Invoicing app/Tenancy app/Security app/Providers/TenancyServiceProvider.php app/Providers/SensitiveDataServiceProvider.php app/Providers/InvoiceIntegrityServiceProvider.php app/Models/CreditNote.php app/Models/CreditNoteItem.php app/Models/IntegrationSecret.php
+      - name: Analyse statique ciblée
+        run: vendor/bin/phpstan analyse app/Domain/Invoicing app/Tenancy app/Security --level=3 --no-progress --memory-limit=1G
+      - name: Dette de format PHP historique
+        continue-on-error: true
+        run: vendor/bin/pint --test
+      - name: Audit dépendances PHP
         if: always()
         run: composer audit || true
 
   frontend:
     name: Frontend Vue historique
     runs-on: ubuntu-latest
-
     steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
-      - name: Installer PHP pour Laravel Vite
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, openssl, pdo_sqlite, tokenizer, xml, zip
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, intl, openssl, pdo_sqlite, tokenizer, xml, zip
           coverage: none
-
-      - name: Préparer Laravel pour Vite
+      - name: Préparer Laravel
         run: |
           cp .env.example .env
           composer install --no-interaction --prefer-dist --no-progress
           php artisan key:generate
-
-      - name: Installer Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '16.20.2'
-
-      - name: Installer les dépendances frontend historiques
+      - name: Installer le frontend
         run: npm install --legacy-peer-deps --no-audit --no-fund
-
-      - name: Vérifier les fichiers frontend modifiés par AutoFacture
-        run: >-
-          npx eslint
-          resources/scripts/admin/views/customers/Create.vue
-          resources/scripts/admin/views/settings/CompanyInfoSettings.vue
-          resources/scripts/components/icons/MainLogo.vue
-          resources/scripts/admin/stub/customer.js
-
-      - name: Auditer le lint historique complet
+      - name: Lint AutoFacture
+        run: npx eslint resources/scripts/admin/views/customers/Create.vue resources/scripts/admin/views/settings/CompanyInfoSettings.vue resources/scripts/components/icons/MainLogo.vue resources/scripts/admin/stub/customer.js
+      - name: Dette de lint Crater historique
         continue-on-error: true
-        run: |
-          set -o pipefail
-          npm run test 2>&1 | tee frontend-lint.log
-
+        run: npm run test
       - name: Construire le frontend
-        run: |
-          set -o pipefail
-          npm run build 2>&1 | tee frontend-build.log
-
-      - name: Publier les journaux frontend
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-logs
-          path: |
-            frontend-lint.log
-            frontend-build.log
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Inventorier les vulnérabilités NPM
+        run: npm run build
+      - name: Audit dépendances NPM
         if: always()
         run: npm audit --omit=dev || true
 
   docker:
-    name: Docker Compose
+    name: Docker PHP 8.4
     runs-on: ubuntu-latest
-
     steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Valider Docker Compose
         run: docker compose config --quiet
-
-      - name: Construire l'image applicative
-        run: |
-          set -o pipefail
-          docker compose build app 2>&1 | tee docker-build.log
-
-      - name: Publier le journal Docker
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-build
-          path: docker-build.log
-          retention-days: 7
+      - name: Construire l'image
+        run: docker compose build app
