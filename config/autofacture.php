@@ -1,16 +1,6 @@
 <?php
 
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Fonctions AutoFacture
-    |--------------------------------------------------------------------------
-    |
-    | Les indicateurs pilotent à la fois la visibilité des menus et l'accès
-    | direct aux anciennes URL de Crater. Une fonction désactivée reste dans
-    | le code et la base, mais n'est plus utilisable dans le MVP.
-    |
-    */
     'features' => [
         'dashboard' => env('FEATURE_DASHBOARD', true),
         'customers' => env('FEATURE_CUSTOMERS', true),
@@ -20,8 +10,6 @@ return [
         'payments' => env('FEATURE_PAYMENTS', true),
         'users' => env('FEATURE_USERS', true),
         'settings' => env('FEATURE_SETTINGS', true),
-
-        // Fonctions volontairement masquées dans le MVP initial.
         'recurring_invoices' => env('FEATURE_RECURRING_INVOICES', false),
         'expenses' => env('FEATURE_EXPENSES', false),
         'reports' => env('FEATURE_REPORTS', false),
@@ -37,21 +25,16 @@ return [
         'tax_types' => true,
         'payment_modes' => true,
         'notes' => true,
-        'mail_configuration' => true,
-        'file_disk' => true,
-        'backup' => true,
-
-        // Masquées pour alléger l'expérience du MVP.
         'roles' => env('FEATURE_ADVANCED_ROLES', false),
         'exchange_rate_provider' => env('FEATURE_EXCHANGE_RATES', false),
         'custom_fields' => env('FEATURE_CUSTOM_FIELDS', false),
         'expense_category' => env('FEATURE_EXPENSES', false),
         'update_app' => env('FEATURE_IN_APP_UPDATE', false),
+        'mail_configuration' => env('FEATURE_MAIL_CONFIGURATION', false),
+        'file_disk' => env('FEATURE_FILE_DISK', false),
+        'backup' => env('FEATURE_BACKUP', false),
     ],
 
-    /*
-    | Les noms correspondent aux valeurs `name` de config/crater.php.
-    */
     'main_menu_map' => [
         'Dashboard' => 'dashboard',
         'Customers' => 'customers',
@@ -86,9 +69,6 @@ return [
         'Update App' => 'update_app',
     ],
 
-    /*
-    | Motifs Laravel Request::is() bloqués lorsque la fonction est désactivée.
-    */
     'route_patterns' => [
         'recurring_invoices' => [
             'admin/recurring-invoices*',
@@ -112,10 +92,9 @@ return [
     ],
 
     'settings_route_patterns' => [
+        // Les API rôles/abilities restent accessibles car l'écran Utilisateurs en dépend.
         'roles' => [
             'admin/settings/roles-settings*',
-            'api/v1/roles*',
-            'api/v1/abilities*',
         ],
         'exchange_rate_provider' => [
             'admin/settings/exchange-rate-provider*',
@@ -126,13 +105,28 @@ return [
             'api/v1/currencies/*/active-provider*',
             'api/v1/currencies/bulk-update-exchange-rate*',
         ],
+        // L'API de lecture reste disponible tant que les formulaires historiques la sollicitent.
         'custom_fields' => [
             'admin/settings/custom-fields*',
-            'api/v1/custom-fields*',
         ],
         'expense_category' => [
             'admin/settings/expense-category*',
             'api/v1/categories*',
+        ],
+        'mail_configuration' => [
+            'admin/settings/mail-configuration*',
+            'api/v1/mail/*',
+            'api/v1/company/mail/config*',
+        ],
+        'file_disk' => [
+            'admin/settings/file-disk*',
+            'api/v1/disks*',
+            'api/v1/disk/drivers*',
+        ],
+        'backup' => [
+            'admin/settings/backup*',
+            'api/v1/backups*',
+            'api/v1/download-backup*',
         ],
         'update_app' => [
             'admin/settings/update-app*',
