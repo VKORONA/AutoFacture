@@ -43,7 +43,6 @@ class FrenchCompanyDefaults
             'fiscal_year' => '1-12',
             'carbon_date_format' => 'd/m/Y',
             'moment_date_format' => 'DD/MM/YYYY',
-            'notification_email' => 'no-reply@autofacture.local',
             'invoice_number_format' => '{{SERIES:FAC}}{{DELIMITER:-}}{{SEQUENCE:6}}',
             'estimate_number_format' => '{{SERIES:DEV}}{{DELIMITER:-}}{{SEQUENCE:6}}',
             'payment_number_format' => '{{SERIES:REG}}{{DELIMITER:-}}{{SEQUENCE:6}}',
