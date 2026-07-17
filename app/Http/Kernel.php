@@ -21,6 +21,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \Crater\Http\Middleware\TrustProxies::class,
         \Crater\Http\Middleware\ConfigMiddleware::class,
+        \Crater\Http\Middleware\EnsureFeatureIsEnabled::class,
         \Fruitcake\Cors\HandleCors::class,
     ];
 

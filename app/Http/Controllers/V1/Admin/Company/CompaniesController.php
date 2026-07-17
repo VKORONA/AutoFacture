@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Controllers\V1\Admin\Company;
 
+use Crater\Domain\FrenchInvoicing\FrenchCompanyDefaults;
 use Crater\Http\Controllers\Controller;
 use Crater\Http\Requests\CompaniesRequest;
 use Crater\Http\Resources\CompanyResource;
@@ -13,16 +14,16 @@ use Vinkla\Hashids\Facades\Hashids;
 
 class CompaniesController extends Controller
 {
-    public function store(CompaniesRequest $request)
+    public function store(CompaniesRequest $request, FrenchCompanyDefaults $defaults)
     {
         $this->authorize('create company');
 
         $user = $request->user();
-
         $company = Company::create($request->getCompanyPayload());
         $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
         $company->save();
         $company->setupDefaultData();
+        $defaults->apply($company, $request->currency);
         $user->companies()->attach($company->id);
         $user->assign('super admin');
 
@@ -36,9 +37,7 @@ class CompaniesController extends Controller
     public function destroy(Request $request)
     {
         $company = Company::find($request->header('company'));
-
         $this->authorize('delete company', $company);
-
         $user = $request->user();
 
         if ($request->name !== $company->name) {
@@ -51,9 +50,7 @@ class CompaniesController extends Controller
 
         $company->deleteCompany($user);
 
-        return response()->json([
-            'success' => true
-        ]);
+        return response()->json(['success' => true]);
     }
 
     public function transferOwnership(Request $request, User $user)
@@ -64,22 +61,18 @@ class CompaniesController extends Controller
         if ($user->hasCompany($company->id)) {
             return response()->json([
                 'success' => false,
-                'message' => 'User does not belongs to this company.'
+                'message' => 'User does not belongs to this company.',
             ]);
         }
 
         $company->update(['owner_id' => $user->id]);
         BouncerFacade::sync($user)->roles(['super admin']);
 
-        return response()->json([
-            'success' => true
-        ]);
+        return response()->json(['success' => true]);
     }
 
     public function getUserCompanies(Request $request)
     {
-        $companies = $request->user()->companies;
-
-        return CompanyResource::collection($companies);
+        return CompanyResource::collection($request->user()->companies);
     }
 }

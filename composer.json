@@ -1,11 +1,13 @@
 {
-  "name": "crater-invoice/crater",
-  "description": "Free & Open Source Invoice App for Individuals & Small Businesses. https://craterapp.com",
+  "name": "vkorona/autofacture",
+  "description": "SaaS français de devis, facturation et facturation électronique dérivé de Crater.",
   "keywords": [
-    "framework",
-    "laravel"
+    "facturation",
+    "factur-x",
+    "laravel",
+    "vue"
   ],
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "project",
   "require": {
     "php": "^7.4 || ^8.0",
