@@ -3,7 +3,10 @@
 namespace Crater\Providers;
 
 use Crater\Exceptions\FinalizedInvoiceMutationException;
+use Crater\Models\CreditNote;
+use Crater\Models\CreditNoteItem;
 use Crater\Models\Invoice;
+use DomainException;
 use Illuminate\Support\ServiceProvider;
 
 class InvoiceIntegrityServiceProvider extends ServiceProvider
@@ -41,5 +44,10 @@ class InvoiceIntegrityServiceProvider extends ServiceProvider
                 throw new FinalizedInvoiceMutationException();
             }
         });
+
+        CreditNote::updating(fn () => throw new DomainException('Un avoir émis est immuable.'));
+        CreditNote::deleting(fn () => throw new DomainException('Un avoir émis ne peut pas être supprimé.'));
+        CreditNoteItem::updating(fn () => throw new DomainException('Une ligne d’avoir émise est immuable.'));
+        CreditNoteItem::deleting(fn () => throw new DomainException('Une ligne d’avoir émise ne peut pas être supprimée.'));
     }
 }
