@@ -1,5 +1,7 @@
 <?php
 
+use Crater\Models\CreditNote;
+use Crater\Models\CreditNoteItem;
 use Crater\Models\Customer;
 use Crater\Models\CustomField;
 use Crater\Models\Estimate;
@@ -8,6 +10,7 @@ use Crater\Models\ExchangeRateProvider;
 use Crater\Models\Expense;
 use Crater\Models\ExpenseCategory;
 use Crater\Models\FileDisk;
+use Crater\Models\IntegrationSecret;
 use Crater\Models\Invoice;
 use Crater\Models\Item;
 use Crater\Models\Note;
@@ -18,11 +21,9 @@ use Crater\Models\TaxType;
 use Crater\Models\Unit;
 
 return [
-    /*
-     * Ces modèles reçoivent automatiquement un filtre company_id dès qu’un
-     * contexte d’entreprise a été résolu par le middleware HTTP.
-     */
     'models' => [
+        CreditNote::class,
+        CreditNoteItem::class,
         Customer::class,
         CustomField::class,
         Estimate::class,
@@ -31,6 +32,7 @@ return [
         Expense::class,
         ExpenseCategory::class,
         FileDisk::class,
+        IntegrationSecret::class,
         Invoice::class,
         Item::class,
         Note::class,
