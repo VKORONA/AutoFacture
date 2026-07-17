@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Crater\Domain\FrenchInvoicing\FrenchCompanyDefaults;
 use Crater\Models\Company;
+use Crater\Models\Currency;
 use Crater\Models\Setting;
 use Crater\Models\User;
 use Illuminate\Database\Seeder;
@@ -30,7 +31,10 @@ class UsersTableSeeder extends Seeder
         $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
         $company->save();
         $company->setupDefaultData();
-        app(FrenchCompanyDefaults::class)->apply($company);
+
+        $euroId = Currency::where('code', 'EUR')->value('id');
+        app(FrenchCompanyDefaults::class)->apply($company, $euroId);
+
         $user->companies()->attach($company->id);
         BouncerFacade::scope()->to($company->id);
         $user->assign('super admin');
