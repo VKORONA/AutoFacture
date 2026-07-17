@@ -37,7 +37,7 @@ class CustomerRequest extends FormRequest
             'vat_number' => ['nullable', 'string', 'max:20', 'regex:/^[A-Z]{2}[A-Z0-9]{2,18}$/i'],
             'ape_code' => ['nullable', 'string', 'max:8'],
             'enable_portal' => ['boolean'],
-            'currency_id' => ['nullable'],
+            'currency_id' => ['required', 'integer', 'exists:currencies,id'],
             'billing.name' => ['nullable'],
             'billing.address_street_1' => ['nullable'],
             'billing.address_street_2' => ['nullable'],
@@ -58,7 +58,7 @@ class CustomerRequest extends FormRequest
             'shipping.fax' => ['nullable'],
         ];
 
-        if ($this->isMethod('PUT') && $this->email != null) {
+        if ($this->isMethod('PUT') && $this->email !== null) {
             $rules['email'] = [
                 'email',
                 'nullable',
@@ -71,15 +71,37 @@ class CustomerRequest extends FormRequest
         return $rules;
     }
 
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($this->customer_type === 'business' && $this->siren && $this->siret && substr($this->siret, 0, 9) !== $this->siren) {
+                $validator->errors()->add('siret', 'Le SIRET doit commencer par le SIREN du client.');
+            }
+        });
+    }
+
     protected function prepareForValidation()
     {
-        $this->merge([
-            'customer_type' => $this->customer_type ?: 'business',
-            'siren' => $this->digitsOnly($this->siren),
-            'siret' => $this->digitsOnly($this->siret),
-            'vat_number' => $this->upperCompact($this->vat_number),
-            'ape_code' => $this->upperCompact($this->ape_code),
-        ]);
+        $customerType = $this->customer_type ?: 'business';
+        $businessFields = $customerType === 'business'
+            ? [
+                'siren' => $this->digitsOnly($this->siren),
+                'siret' => $this->digitsOnly($this->siret),
+                'vat_number' => $this->upperCompact($this->vat_number),
+                'ape_code' => $this->upperCompact($this->ape_code),
+            ]
+            : [
+                'company_name' => null,
+                'siren' => null,
+                'siret' => null,
+                'vat_number' => null,
+                'ape_code' => null,
+            ];
+
+        $this->merge(array_merge([
+            'customer_type' => $customerType,
+            'enable_portal' => filter_var($this->enable_portal, FILTER_VALIDATE_BOOLEAN),
+        ], $businessFields));
     }
 
     public function getCustomerPayload()
