@@ -23,9 +23,6 @@ abstract class TestCase extends BaseTestCase
         });
     }
 
-    /**
-     * Compatibilité avec les tests Crater écrits avant assertModelMissing().
-     */
     public function assertDeleted(Model $model): static
     {
         $this->assertModelMissing($model);
@@ -33,13 +30,7 @@ abstract class TestCase extends BaseTestCase
         return $this;
     }
 
-    /**
-     * Les montants comptables sont stockés en centimes entiers. Les anciens
-     * tests SQLite acceptaient implicitement des décimales dans ces colonnes,
-     * contrairement à MariaDB. On normalise donc uniquement les attentes des
-     * colonnes entières, sans modifier les taux de change décimaux.
-     */
-    public function assertDatabaseHas($table, array $data, $connection = null)
+    public function assertDatabaseHas($table, array $data = [], $connection = null)
     {
         $tableName = is_string($table) ? $table : (new $table())->getTable();
         $connectionName = $connection ?: config('database.default');
