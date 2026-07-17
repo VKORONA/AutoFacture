@@ -10,10 +10,11 @@ return new class extends Migration
     {
         Schema::table('invoices', function (Blueprint $table): void {
             $table->timestamp('finalized_at')->nullable()->index();
-            $table->foreignId('finalized_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('finalized_by')->nullable();
             $table->string('immutable_hash', 64)->nullable()->unique();
             $table->longText('finalized_snapshot')->nullable();
             $table->unsignedBigInteger('credited_amount')->default(0);
+            $table->foreign('finalized_by')->references('id')->on('users')->nullOnDelete();
         });
     }
 
