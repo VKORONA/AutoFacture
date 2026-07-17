@@ -100,6 +100,7 @@ class CustomerRequest extends FormRequest
 
         $this->merge(array_merge([
             'customer_type' => $customerType,
+            'prefix' => $this->prefix === null ? null : (string) $this->prefix,
             'enable_portal' => filter_var($this->enable_portal, FILTER_VALIDATE_BOOLEAN),
         ], $businessFields));
     }
