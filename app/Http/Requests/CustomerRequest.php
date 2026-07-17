@@ -3,6 +3,7 @@
 namespace Crater\Http\Requests;
 
 use Crater\Models\Address;
+use Crater\Rules\ValidFrenchBusinessNumber;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
@@ -31,8 +32,8 @@ class CustomerRequest extends FormRequest
             'contact_name' => ['nullable', 'string', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
             'prefix' => ['nullable', 'string', 'max:20'],
-            'siren' => ['nullable', 'regex:/^\d{9}$/'],
-            'siret' => ['nullable', 'regex:/^\d{14}$/'],
+            'siren' => ['nullable', 'regex:/^\d{9}$/', new ValidFrenchBusinessNumber(9, 'SIREN')],
+            'siret' => ['nullable', 'regex:/^\d{14}$/', new ValidFrenchBusinessNumber(14, 'SIRET')],
             'vat_number' => ['nullable', 'string', 'max:20', 'regex:/^[A-Z]{2}[A-Z0-9]{2,18}$/i'],
             'ape_code' => ['nullable', 'string', 'max:8'],
             'enable_portal' => ['boolean'],
