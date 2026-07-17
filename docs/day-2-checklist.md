@@ -10,24 +10,33 @@
 - [x] Informations légales exposées dans `CompanyResource`.
 - [x] Informations légales exposées dans `CustomerResource`.
 - [x] Formulaire entreprise enrichi avec les champs français.
-- [x] Modèle de saisie client enrichi.
+- [x] Formulaire client simplifié et enrichi avec les champs français.
+- [x] Distinction client professionnel / particulier ajoutée.
 - [x] Validation serveur des identifiants clients ajoutée.
 - [x] Commande Artisan de configuration française ajoutée.
 - [x] Numérotation recommandée FAC / DEV / REG préparée.
 - [x] Fuseau Europe/Paris et formats de dates français préparés.
 - [x] Générateur de mentions légales françaises créé.
 - [x] Mention « TVA non applicable, art. 293 B du CGI » prise en charge.
+- [x] Mentions légales entreprise et client injectées dans les formats PDF.
+- [x] Placeholders PDF SIREN, SIRET, TVA, APE, IBAN et BIC ajoutés.
 - [x] Tests unitaires SIREN, SIRET et mentions légales ajoutés.
 
-## À poursuivre dans le jour 2
+## Validation à effectuer sur le poste de développement
 
-- [ ] Ajouter les champs légaux au formulaire visuel de création client.
-- [ ] Ajouter les traductions françaises dédiées dans `fr.json`.
-- [ ] Vérifier la migration sur MySQL et MariaDB.
-- [ ] Ajouter une validation complète de checksum IBAN.
-- [ ] Vérifier la persistance de tous les champs depuis l'interface.
-- [ ] Injecter les mentions françaises dans les modèles PDF existants.
-- [ ] Ajouter l'identité légale dans les futurs snapshots Factur-X.
+- [ ] Exécuter la migration sur MySQL.
+- [ ] Exécuter la migration sur MariaDB si cette base reste supportée.
+- [ ] Vérifier la création et la modification d'un client depuis l'interface.
+- [ ] Générer un devis PDF avec société assujettie à la TVA.
+- [ ] Générer un devis PDF avec franchise en base de TVA.
+- [ ] Générer une facture PDF avec les coordonnées légales et bancaires attendues.
+- [ ] Exécuter les tests PHP et le build Vue/Vite.
+
+## Reporté au chantier Factur-X
+
+- [ ] Créer le snapshot immuable de l'identité vendeur et acheteur.
+- [ ] Reporter les identifiants légaux dans le XML Factur-X.
+- [ ] Ajouter une validation complète de checksum IBAN avant affichage sur facture finale.
 
 ## Commandes de validation
 
