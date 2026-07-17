@@ -3,6 +3,7 @@
 use Crater\Models\FileDisk;
 use Crater\Models\User;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
@@ -16,51 +17,49 @@ beforeEach(function () {
     $this->withHeaders([
         'company' => $user->companies()->first()->id,
     ]);
-    Sanctum::actingAs(
-        $user,
-        ['*']
-    );
+    Sanctum::actingAs($user, ['*']);
 });
 
 test('get file disks', function () {
-    $response = getJson('/api/v1/disks');
-
-    $response->assertOk();
+    getJson('/api/v1/disks')->assertOk();
 });
 
-test('create file disk', function () {
-    $disk = FileDisk::factory()->raw();
+test('create file disk with encrypted credentials', function () {
+    $payload = FileDisk::factory()->raw();
 
-    $response = postJson('/api/v1/disks', $disk);
+    postJson('/api/v1/disks', $payload)->assertSuccessful();
 
-    $disk['credentials'] = json_encode($disk['credentials']);
-    $this->assertDatabaseHas('file_disks', $disk);
+    $disk = FileDisk::query()->where('name', $payload['name'])->firstOrFail();
+    $rawCredentials = DB::table('file_disks')->where('id', $disk->id)->value('credentials');
+
+    expect($rawCredentials)
+        ->toBeString()
+        ->toStartWith('enc:v1:')
+        ->not->toContain((string) ($payload['credentials']['root'] ?? ''))
+        ->and(json_decode($disk->credentials, true))->toMatchArray($payload['credentials']);
 });
 
-
-test('update file disk', function () {
+test('update file disk with encrypted credentials', function () {
     $disk = FileDisk::factory()->create();
+    $payload = FileDisk::factory()->raw();
 
-    $disk2 = FileDisk::factory()->raw();
+    putJson("/api/v1/disks/{$disk->id}", $payload)->assertOk();
 
-    $response = putJson("/api/v1/disks/{$disk->id}", $disk2)->assertStatus(200);
+    $disk->refresh();
+    $rawCredentials = DB::table('file_disks')->where('id', $disk->id)->value('credentials');
 
-    $disk2['credentials'] = json_encode($disk2['credentials']);
-
-    $this->assertDatabaseHas('file_disks', $disk2);
+    expect($disk->name)->toBe($payload['name'])
+        ->and($disk->driver)->toBe($payload['driver'])
+        ->and($rawCredentials)->toStartWith('enc:v1:')
+        ->and(json_decode($disk->credentials, true))->toMatchArray($payload['credentials']);
 });
-
 
 test('get disk', function () {
     $disk = FileDisk::factory()->create();
 
-    $response = getJson("/api/v1/disks/{$disk->driver}");
-
-    $response->assertStatus(200);
+    getJson("/api/v1/disks/{$disk->driver}")->assertOk();
 });
 
 test('get drivers', function () {
-    $response = getJson("/api/v1/disk/drivers");
-
-    $response->assertStatus(200);
+    getJson('/api/v1/disk/drivers')->assertOk();
 });
