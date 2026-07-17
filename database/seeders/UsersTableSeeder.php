@@ -4,10 +4,12 @@ namespace Database\Seeders;
 
 use Crater\Domain\FrenchInvoicing\FrenchCompanyDefaults;
 use Crater\Models\Company;
+use Crater\Models\Country;
 use Crater\Models\Currency;
 use Crater\Models\Setting;
 use Crater\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Silber\Bouncer\BouncerFacade;
 use Vinkla\Hashids\Facades\Hashids;
 
@@ -15,6 +17,8 @@ class UsersTableSeeder extends Seeder
 {
     public function run()
     {
+        $this->stabilizeReferenceIdsForTests();
+
         $user = User::query()->where('email', 'admin@autofacture.local')->first();
 
         if (! $user) {
@@ -62,5 +66,28 @@ class UsersTableSeeder extends Seeder
         $user->assign('super admin');
 
         Setting::setSetting('profile_complete', 0);
+    }
+
+    private function stabilizeReferenceIdsForTests(): void
+    {
+        if (! app()->environment('testing')) {
+            return;
+        }
+
+        if (! Currency::query()->whereKey(1)->exists()) {
+            $currencyId = Currency::query()->orderBy('id')->value('id');
+
+            if ($currencyId) {
+                DB::table('currencies')->where('id', $currencyId)->update(['id' => 1]);
+            }
+        }
+
+        if (! Country::query()->whereKey(1)->exists()) {
+            $countryId = Country::query()->orderBy('id')->value('id');
+
+            if ($countryId) {
+                DB::table('countries')->where('id', $countryId)->update(['id' => 1]);
+            }
+        }
     }
 }
