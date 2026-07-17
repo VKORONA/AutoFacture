@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('credit_notes', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('invoice_id')->constrained()->restrictOnDelete();
-            $table->foreignId('customer_id')->constrained()->restrictOnDelete();
-            $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('currency_id')->constrained()->restrictOnDelete();
+            $table->unsignedInteger('company_id');
+            $table->unsignedInteger('invoice_id');
+            $table->unsignedInteger('customer_id');
+            $table->unsignedInteger('creator_id')->nullable();
+            $table->unsignedInteger('currency_id');
             $table->string('credit_note_number', 40);
             $table->unsignedBigInteger('sequence_number');
             $table->string('unique_hash')->nullable()->unique();
@@ -29,15 +29,21 @@ return new class extends Migration
             $table->string('immutable_hash', 64)->unique();
             $table->longText('finalized_snapshot');
             $table->timestamps();
+
+            $table->foreign('company_id')->references('id')->on('companies')->cascadeOnDelete();
+            $table->foreign('invoice_id')->references('id')->on('invoices')->restrictOnDelete();
+            $table->foreign('customer_id')->references('id')->on('customers')->restrictOnDelete();
+            $table->foreign('creator_id')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('currency_id')->references('id')->on('currencies')->restrictOnDelete();
             $table->unique(['company_id', 'credit_note_number']);
             $table->index(['company_id', 'invoice_id']);
         });
 
         Schema::create('credit_note_items', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->unsignedInteger('company_id');
             $table->foreignId('credit_note_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('invoice_item_id')->nullable()->constrained('invoice_items')->nullOnDelete();
+            $table->unsignedInteger('invoice_item_id')->nullable();
             $table->string('name');
             $table->text('description')->nullable();
             $table->decimal('quantity', 15, 4)->default(1);
@@ -46,6 +52,9 @@ return new class extends Migration
             $table->unsignedBigInteger('tax')->default(0);
             $table->unsignedBigInteger('total');
             $table->timestamps();
+
+            $table->foreign('company_id')->references('id')->on('companies')->cascadeOnDelete();
+            $table->foreign('invoice_item_id')->references('id')->on('invoice_items')->nullOnDelete();
         });
     }
 
