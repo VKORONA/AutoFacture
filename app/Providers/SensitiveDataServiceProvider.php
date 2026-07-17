@@ -63,6 +63,16 @@ class SensitiveDataServiceProvider extends ServiceProvider
             return false;
         }
 
-        return Schema::getColumnType($table, $attribute) !== 'json';
+        /*
+         * Le champ credentials historique est un JSON MariaDB, donc un
+         * LONGTEXT avec une contrainte JSON. Il ne peut recevoir le préfixe
+         * chiffré qu'après la migration qui crée integration_secrets et retire
+         * cette contrainte.
+         */
+        if ($model instanceof FileDisk && ! Schema::hasTable('integration_secrets')) {
+            return false;
+        }
+
+        return true;
     }
 }
