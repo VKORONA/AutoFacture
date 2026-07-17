@@ -35,6 +35,22 @@ class ApplyFrenchDefaults extends Command
 
     private function settings(): array
     {
+        $companyAddressFormat = '<h3><strong>{COMPANY_NAME}</strong></h3>'
+            .'<p>{COMPANY_ADDRESS_STREET_1}</p>'
+            .'<p>{COMPANY_ADDRESS_STREET_2}</p>'
+            .'<p>{COMPANY_ZIP_CODE} {COMPANY_CITY}</p>'
+            .'<p>{COMPANY_COUNTRY}</p>'
+            .'<p>{COMPANY_PHONE}</p>'
+            .'<p>{COMPANY_LEGAL_MENTIONS}</p>';
+
+        $billingAddressFormat = '<h3>{BILLING_ADDRESS_NAME}</h3>'
+            .'<p>{BILLING_ADDRESS_STREET_1}</p>'
+            .'<p>{BILLING_ADDRESS_STREET_2}</p>'
+            .'<p>{BILLING_ZIP_CODE} {BILLING_CITY}</p>'
+            .'<p>{BILLING_COUNTRY}</p>'
+            .'<p>{BILLING_PHONE}</p>'
+            .'<p>{CUSTOMER_LEGAL_MENTIONS}</p>';
+
         return [
             'time_zone' => 'Europe/Paris',
             'language' => 'fr',
@@ -52,6 +68,12 @@ class ApplyFrenchDefaults extends Command
             'retrospective_edits' => 'disable_on_invoice_sent',
             'invoice_email_attachment' => 'YES',
             'estimate_email_attachment' => 'YES',
+            'invoice_company_address_format' => $companyAddressFormat,
+            'estimate_company_address_format' => $companyAddressFormat,
+            'payment_company_address_format' => $companyAddressFormat,
+            'invoice_billing_address_format' => $billingAddressFormat,
+            'estimate_billing_address_format' => $billingAddressFormat,
+            'payment_from_customer_address_format' => $billingAddressFormat,
             'invoice_mail_body' => 'Bonjour,<br><br>Veuillez trouver ci-joint la facture émise par <b>{COMPANY_NAME}</b>.<br><br>Cordialement.',
             'estimate_mail_body' => 'Bonjour,<br><br>Veuillez trouver ci-joint notre devis émis par <b>{COMPANY_NAME}</b>.<br><br>Cordialement.',
             'payment_mail_body' => 'Bonjour,<br><br>Nous vous remercions pour votre règlement. Vous trouverez le reçu en pièce jointe.<br><br>Cordialement.',
