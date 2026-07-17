@@ -1,0 +1,69 @@
+name: Format modernization code
+
+on:
+  push:
+    branches:
+      - develop/hardening-modernization
+    paths:
+      - app/Domain/Invoicing/**
+      - app/Tenancy/**
+      - app/Security/**
+      - app/Providers/TenancyServiceProvider.php
+      - app/Providers/SensitiveDataServiceProvider.php
+      - app/Providers/InvoiceIntegrityServiceProvider.php
+      - app/Models/CreditNote.php
+      - app/Models/CreditNoteItem.php
+      - app/Models/IntegrationSecret.php
+      - .github/workflows/format-modernization.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: autofacture-pint-modernization
+  cancel-in-progress: true
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer la branche
+        uses: actions/checkout@v4
+        with:
+          ref: develop/hardening-modernization
+
+      - name: Installer PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, intl, openssl, pdo_mysql, tokenizer, xml, zip
+          coverage: none
+
+      - name: Installer les dépendances
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Formater les composants AutoFacture
+        run: >-
+          vendor/bin/pint
+          app/Domain/Invoicing
+          app/Tenancy
+          app/Security
+          app/Providers/TenancyServiceProvider.php
+          app/Providers/SensitiveDataServiceProvider.php
+          app/Providers/InvoiceIntegrityServiceProvider.php
+          app/Models/CreditNote.php
+          app/Models/CreditNoteItem.php
+          app/Models/IntegrationSecret.php
+
+      - name: Enregistrer les corrections
+        run: |
+          if git diff --quiet; then
+            echo "Aucune correction Pint nécessaire"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/Domain/Invoicing app/Tenancy app/Security app/Providers/TenancyServiceProvider.php app/Providers/SensitiveDataServiceProvider.php app/Providers/InvoiceIntegrityServiceProvider.php app/Models/CreditNote.php app/Models/CreditNoteItem.php app/Models/IntegrationSecret.php
+          git commit -m "style(quality): appliquer Pint aux composants modernisés"
+          git push origin HEAD:develop/hardening-modernization
