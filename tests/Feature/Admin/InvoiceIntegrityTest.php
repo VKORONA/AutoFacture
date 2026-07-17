@@ -43,9 +43,19 @@ it('scelle une facture et bloque ses données comptables', function () {
     expect(fn () => $fresh->delete())->toThrow(FinalizedInvoiceMutationException::class);
 });
 
+it('refuse un avoir sur une facture brouillon', function () {
+    $user = User::query()->where('role', 'super admin')->firstOrFail();
+    $invoice = Invoice::factory()->create(['status' => Invoice::STATUS_DRAFT]);
+
+    expect(fn () => app(CreditNoteIssuer::class)->issue($invoice, 'Motif', null, $user))
+        ->toThrow(DomainException::class);
+});
+
 it('émet des avoirs partiels sans dépasser le total de la facture', function () {
     $user = User::query()->where('role', 'super admin')->firstOrFail();
     $invoice = Invoice::factory()->create([
+        'status' => Invoice::STATUS_SENT,
+        'sent' => true,
         'total' => 1000,
         'sub_total' => 800,
         'tax' => 200,
