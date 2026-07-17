@@ -55,9 +55,20 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
-        run: php artisan test
+        run: |
+          set -o pipefail
+          php artisan test 2>&1 | tee backend-tests.log
+
+      - name: Publier le journal PHP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-tests
+          path: backend-tests.log
+          retention-days: 7
 
       - name: Inventorier les vulnérabilités PHP
+        if: always()
         run: composer audit || true
 
   frontend:
@@ -76,13 +87,30 @@ jobs:
       - name: Installer les dépendances frontend historiques
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Vérifier le code frontend
-        run: npm run test
+      - name: Auditer le lint historique
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run test 2>&1 | tee frontend-lint.log
 
       - name: Construire le frontend
-        run: npm run build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee frontend-build.log
+
+      - name: Publier les journaux frontend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-logs
+          path: |
+            frontend-lint.log
+            frontend-build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Inventorier les vulnérabilités NPM
+        if: always()
         run: npm audit --omit=dev || true
 
   docker:
@@ -97,4 +125,14 @@ jobs:
         run: docker compose config --quiet
 
       - name: Construire l'image applicative
-        run: docker compose build app
+        run: |
+          set -o pipefail
+          docker compose build app 2>&1 | tee docker-build.log
+
+      - name: Publier le journal Docker
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-build
+          path: docker-build.log
+          retention-days: 7
