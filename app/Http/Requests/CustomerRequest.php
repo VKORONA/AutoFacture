@@ -9,122 +9,76 @@ use Illuminate\Validation\Rule;
 
 class CustomerRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     *
-     * @return bool
-     */
     public function authorize()
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array
-     */
     public function rules()
     {
         $rules = [
-            'name' => [
-                'required',
-            ],
+            'name' => ['required', 'string', 'max:255'],
+            'customer_type' => ['required', Rule::in(['business', 'individual'])],
             'email' => [
                 'email',
                 'nullable',
-                Rule::unique('customers')->where('company_id', $this->header('company'))
+                Rule::unique('customers')->where('company_id', $this->header('company')),
             ],
-            'password' => [
-                'nullable',
-            ],
-            'phone' => [
-                'nullable',
-            ],
-            'company_name' => [
-                'nullable',
-            ],
-            'contact_name' => [
-                'nullable',
-            ],
-            'website' => [
-                'nullable',
-            ],
-            'prefix' => [
-                'nullable',
-            ],
-            'enable_portal' => [
-
-                'boolean'
-            ],
-            'currency_id' => [
-                'nullable',
-            ],
-            'billing.name' => [
-                'nullable',
-            ],
-            'billing.address_street_1' => [
-                'nullable',
-            ],
-            'billing.address_street_2' => [
-                'nullable',
-            ],
-            'billing.city' => [
-                'nullable',
-            ],
-            'billing.state' => [
-                'nullable',
-            ],
-            'billing.country_id' => [
-                'nullable',
-            ],
-            'billing.zip' => [
-                'nullable',
-            ],
-            'billing.phone' => [
-                'nullable',
-            ],
-            'billing.fax' => [
-                'nullable',
-            ],
-            'shipping.name' => [
-                'nullable',
-            ],
-            'shipping.address_street_1' => [
-                'nullable',
-            ],
-            'shipping.address_street_2' => [
-                'nullable',
-            ],
-            'shipping.city' => [
-                'nullable',
-            ],
-            'shipping.state' => [
-                'nullable',
-            ],
-            'shipping.country_id' => [
-                'nullable',
-            ],
-            'shipping.zip' => [
-                'nullable',
-            ],
-            'shipping.phone' => [
-                'nullable',
-            ],
-            'shipping.fax' => [
-                'nullable',
-            ]
+            'electronic_invoicing_email' => ['nullable', 'email', 'max:255'],
+            'password' => ['nullable'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'company_name' => ['nullable', 'string', 'max:255'],
+            'contact_name' => ['nullable', 'string', 'max:255'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'prefix' => ['nullable', 'string', 'max:20'],
+            'siren' => ['nullable', 'regex:/^\d{9}$/'],
+            'siret' => ['nullable', 'regex:/^\d{14}$/'],
+            'vat_number' => ['nullable', 'string', 'max:20', 'regex:/^[A-Z]{2}[A-Z0-9]{2,18}$/i'],
+            'ape_code' => ['nullable', 'string', 'max:8'],
+            'enable_portal' => ['boolean'],
+            'currency_id' => ['nullable'],
+            'billing.name' => ['nullable'],
+            'billing.address_street_1' => ['nullable'],
+            'billing.address_street_2' => ['nullable'],
+            'billing.city' => ['nullable'],
+            'billing.state' => ['nullable'],
+            'billing.country_id' => ['nullable'],
+            'billing.zip' => ['nullable'],
+            'billing.phone' => ['nullable'],
+            'billing.fax' => ['nullable'],
+            'shipping.name' => ['nullable'],
+            'shipping.address_street_1' => ['nullable'],
+            'shipping.address_street_2' => ['nullable'],
+            'shipping.city' => ['nullable'],
+            'shipping.state' => ['nullable'],
+            'shipping.country_id' => ['nullable'],
+            'shipping.zip' => ['nullable'],
+            'shipping.phone' => ['nullable'],
+            'shipping.fax' => ['nullable'],
         ];
 
         if ($this->isMethod('PUT') && $this->email != null) {
             $rules['email'] = [
                 'email',
                 'nullable',
-                Rule::unique('customers')->where('company_id', $this->header('company'))->ignore($this->route('customer')->id),
+                Rule::unique('customers')
+                    ->where('company_id', $this->header('company'))
+                    ->ignore($this->route('customer')->id),
             ];
-        };
+        }
 
         return $rules;
+    }
+
+    protected function prepareForValidation()
+    {
+        $this->merge([
+            'customer_type' => $this->customer_type ?: 'business',
+            'siren' => $this->digitsOnly($this->siren),
+            'siret' => $this->digitsOnly($this->siret),
+            'vat_number' => $this->upperCompact($this->vat_number),
+            'ape_code' => $this->upperCompact($this->ape_code),
+        ]);
     }
 
     public function getCustomerPayload()
@@ -132,7 +86,9 @@ class CustomerRequest extends FormRequest
         return collect($this->validated())
             ->only([
                 'name',
+                'customer_type',
                 'email',
+                'electronic_invoicing_email',
                 'currency_id',
                 'password',
                 'phone',
@@ -140,6 +96,10 @@ class CustomerRequest extends FormRequest
                 'company_name',
                 'contact_name',
                 'website',
+                'siren',
+                'siret',
+                'vat_number',
+                'ape_code',
                 'enable_portal',
                 'estimate_prefix',
                 'payment_prefix',
@@ -155,27 +115,31 @@ class CustomerRequest extends FormRequest
     public function getShippingAddress()
     {
         return collect($this->shipping)
-            ->merge([
-                'type' => Address::SHIPPING_TYPE
-            ])
+            ->merge(['type' => Address::SHIPPING_TYPE])
             ->toArray();
     }
 
     public function getBillingAddress()
     {
         return collect($this->billing)
-            ->merge([
-                'type' => Address::BILLING_TYPE
-            ])
+            ->merge(['type' => Address::BILLING_TYPE])
             ->toArray();
     }
 
     public function hasAddress(array $address)
     {
-        $data = Arr::where($address, function ($value, $key) {
+        return Arr::where($address, function ($value) {
             return isset($value);
         });
+    }
 
-        return $data;
+    private function digitsOnly($value)
+    {
+        return $value === null ? null : preg_replace('/\D+/', '', (string) $value);
+    }
+
+    private function upperCompact($value)
+    {
+        return $value === null ? null : strtoupper(preg_replace('/\s+/', '', (string) $value));
     }
 }
