@@ -7,17 +7,6 @@ use Illuminate\Http\Request;
 
 class EnsureFeatureIsEnabled
 {
-    /**
-     * Interdit l'accès direct aux fonctions désactivées dans AutoFacture.
-     *
-     * Les menus sont déjà filtrés dans GeneratesMenuTrait. Ce middleware
-     * complète la protection en bloquant également les URL saisies à la main
-     * et les appels directs à l'API historique de Crater.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return mixed
-     */
     public function handle(Request $request, Closure $next)
     {
         $feature = $this->disabledFeatureFor($request);
@@ -48,10 +37,8 @@ class EnsureFeatureIsEnabled
                 continue;
             }
 
-            foreach ((array) $patterns as $pattern) {
-                if ($request->is($pattern)) {
-                    return $feature;
-                }
+            if ($this->matches($request, $patterns)) {
+                return $feature;
             }
         }
 
@@ -60,13 +47,34 @@ class EnsureFeatureIsEnabled
                 continue;
             }
 
-            foreach ((array) $patterns as $pattern) {
-                if ($request->is($pattern)) {
+            if ($this->matches($request, $patterns)) {
+                return $feature;
+            }
+        }
+
+        if (! $request->isMethodSafe()) {
+            foreach (config('autofacture.settings_write_route_patterns', []) as $feature => $patterns) {
+                if ((bool) config("autofacture.settings_features.{$feature}", false)) {
+                    continue;
+                }
+
+                if ($this->matches($request, $patterns)) {
                     return $feature;
                 }
             }
         }
 
         return null;
+    }
+
+    private function matches(Request $request, $patterns): bool
+    {
+        foreach ((array) $patterns as $pattern) {
+            if ($request->is($pattern)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
