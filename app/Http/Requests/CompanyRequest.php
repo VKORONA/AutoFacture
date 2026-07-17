@@ -3,6 +3,7 @@
 namespace Crater\Http\Requests;
 
 use Crater\Rules\ValidFrenchBusinessNumber;
+use Crater\Rules\ValidIban;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +31,7 @@ class CompanyRequest extends FormRequest
             'ape_code' => ['nullable', 'string', 'max:8'],
             'rcs_city' => ['nullable', 'string', 'max:100'],
             'share_capital' => ['nullable', 'numeric', 'min:0'],
-            'iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}[0-9A-Z]{13,32}$/i'],
+            'iban' => ['nullable', 'string', 'max:34', new ValidIban()],
             'bic' => ['nullable', 'string', 'max:11', 'regex:/^[A-Z0-9]{8}([A-Z0-9]{3})?$/i'],
             'vat_regime' => ['required', Rule::in(['standard', 'franchise_base', 'exempt'])],
             'vat_exempt' => ['required', 'boolean'],
