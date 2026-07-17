@@ -73,15 +73,12 @@ class CompaniesController extends Controller
         $company = Company::findOrFail($request->header('company'));
         $this->authorize('transfer company ownership', $company);
 
-        if (! $user->hasCompany($company->id)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User does not belong to this company.',
-            ], 422);
-        }
-
-        $company->update(['owner_id' => $user->id]);
-        BouncerFacade::sync($user)->roles(['super admin']);
+        DB::transaction(function () use ($company, $user): void {
+            $user->companies()->syncWithoutDetaching([$company->id]);
+            $company->update(['owner_id' => $user->id]);
+            BouncerFacade::scope()->to($company->id);
+            BouncerFacade::sync($user)->roles(['super admin']);
+        });
 
         return response()->json(['success' => true]);
     }
