@@ -1,7 +1,6 @@
 <?php
 
 use Crater\Tenancy\CompanyContext;
-use LogicException;
 
 it('mémorise puis libère l’entreprise active', function (): void {
     $context = new CompanyContext();
@@ -24,6 +23,6 @@ it('mémorise puis libère l’entreprise active', function (): void {
 it('refuse une entreprise invalide ou absente', function (): void {
     $context = new CompanyContext();
 
-    expect(fn () => $context->set(0))->toThrow(LogicException::class)
-        ->and(fn () => $context->id())->toThrow(LogicException::class);
+    expect(fn () => $context->set(0))->toThrow(\LogicException::class)
+        ->and(fn () => $context->id())->toThrow(\LogicException::class);
 });
