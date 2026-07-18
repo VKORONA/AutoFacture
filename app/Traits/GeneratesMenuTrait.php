@@ -7,19 +7,39 @@ trait GeneratesMenuTrait
     public function generateMenu($key, $user)
     {
         $menu = [];
+        $configKey = [
+            'main_menu' => 'crater.main_menu',
+            'setting_menu' => 'crater.setting_menu',
+            'customer_portal_menu' => 'crater.customer_menu',
+        ][$key] ?? null;
 
-        foreach (\Menu::get($key)->items->toArray() as $data) {
-            if (! $this->isMenuFeatureEnabled($key, $data->data['name'])) {
+        if (! $configKey) {
+            return $menu;
+        }
+
+        $configuredMenu = config($configKey, []);
+
+        if ($key === 'main_menu') {
+            $configuredMenu = array_merge(
+                $configuredMenu,
+                config('autofacture.additional_main_menu', []),
+            );
+        }
+
+        foreach ($configuredMenu as $data) {
+            if (! $this->isMenuFeatureEnabled($key, $data['name'])) {
                 continue;
             }
 
-            if ($user->checkAccess($data)) {
+            $accessDescriptor = (object) ['data' => $data];
+
+            if ($user->checkAccess($accessDescriptor)) {
                 $menu[] = [
-                    'title' => $data->title,
-                    'link' => $data->link->path['url'],
-                    'icon' => $data->data['icon'],
-                    'name' => $data->data['name'],
-                    'group' => $data->data['group'],
+                    'title' => $data['title'],
+                    'link' => $data['link'],
+                    'icon' => $data['icon'],
+                    'name' => $data['name'],
+                    'group' => $data['group'],
                 ];
             }
         }
@@ -32,11 +52,8 @@ trait GeneratesMenuTrait
         $isSettingMenu = $menuKey === 'setting_menu';
         $mapKey = $isSettingMenu ? 'setting_menu_map' : 'main_menu_map';
         $featuresKey = $isSettingMenu ? 'settings_features' : 'features';
-
         $featureName = config("autofacture.{$mapKey}.{$menuName}");
 
-        // Les extensions ou futurs menus non répertoriés restent visibles afin
-        // de préserver la compatibilité avec le système modulaire de Crater.
         if (! $featureName) {
             return true;
         }

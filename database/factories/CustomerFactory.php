@@ -10,32 +10,27 @@ use Illuminate\Support\Facades\Hash;
 
 class CustomerFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
     protected $model = Customer::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
-    public function definition()
+    public function definition(): array
     {
+        $companyId = User::query()->where('role', 'super admin')->firstOrFail()
+            ->companies()->firstOrFail()->id;
+
         return [
             'name' => $this->faker->name,
             'company_name' => $this->faker->company,
             'contact_name' => $this->faker->name,
-            'prefix' => $this->faker->randomDigitNotNull,
+            'prefix' => (string) $this->faker->randomDigitNotNull,
             'website' => $this->faker->url,
             'enable_portal' => true,
             'email' => $this->faker->unique()->safeEmail,
             'phone' => $this->faker->phoneNumber,
-            'company_id' => User::find(1)->companies()->first()->id,
+            'company_id' => $companyId,
+            'creator_id' => User::query()->where('role', 'super admin')->valueOrFail('id'),
             'password' => Hash::make('secret'),
-            'currency_id' => Currency::find(1)->id,
+            'currency_id' => Currency::query()->valueOrFail('id'),
+            'customer_type' => 'business',
         ];
     }
 }

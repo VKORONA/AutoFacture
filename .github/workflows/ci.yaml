@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - develop/mvp-france-ai
+      - develop/hardening-modernization
   pull_request:
     branches:
       - master
+      - develop/mvp-france-ai
 
 concurrency:
   group: autofacture-ci-${{ github.ref }}
@@ -17,143 +19,184 @@ permissions:
 
 jobs:
   backend:
-    name: Backend PHP 8.1
+    name: Backend Laravel 12 PHP 8.4
     runs-on: ubuntu-latest
-
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: autofacture_test
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: autofacture_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SESSION_DRIVER: array
     steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
-      - name: Installer PHP
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, openssl, pdo_mysql, pdo_sqlite, tokenizer, xml, zip
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, intl, openssl, pdo_mysql, tokenizer, xml, zip
           coverage: none
-
-      - name: Préparer l'environnement
-        run: |
-          cp .env.example .env
-          touch database/database.sqlite
-
-      - name: Valider composer.json
-        run: composer validate --no-check-publish --no-check-lock
-
-      - name: Installer les dépendances PHP verrouillées
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Générer la clé Laravel
-        run: php artisan key:generate
-
-      - name: Vérifier les migrations SQLite
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
-        run: php artisan migrate --force
-
-      - name: Exécuter les tests PHP
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
+      - name: Préparer Laravel
+        run: cp .env.example .env
+      - name: Installer Composer
         run: |
           set -o pipefail
-          php artisan test 2>&1 | tee backend-tests.log
-
-      - name: Publier le journal PHP
+          composer validate --no-check-publish 2>&1 | tee composer-validate.log
+          composer install --no-interaction --prefer-dist --no-progress 2>&1 | tee composer-install.log
+          php artisan key:generate 2>&1 | tee artisan-bootstrap.log
+      - name: Publier les journaux Composer
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-tests
-          path: backend-tests.log
+          name: composer-bootstrap
+          path: |
+            composer-validate.log
+            composer-install.log
+            artisan-bootstrap.log
+          if-no-files-found: ignore
           retention-days: 7
-
-      - name: Inventorier les vulnérabilités PHP
+      - name: Migrer et tester
+        run: |
+          set -o pipefail
+          php artisan about --only=environment 2>&1 | tee artisan-about.log
+          php artisan migrate:fresh --force 2>&1 | tee migrations.log
+          php artisan test 2>&1 | tee tests.log
+      - name: Publier les journaux Laravel
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: laravel-runtime
+          path: |
+            artisan-about.log
+            migrations.log
+            tests.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Format AutoFacture
+        run: |
+          set -o pipefail
+          vendor/bin/pint --test --config pint.json \
+            app/Domain/Invoicing \
+            app/Tenancy \
+            app/Security \
+            app/Providers/TenancyServiceProvider.php \
+            app/Providers/SensitiveDataServiceProvider.php \
+            app/Providers/InvoiceIntegrityServiceProvider.php \
+            app/Http/Controllers/V1/Admin/CreditNote \
+            app/Http/Controllers/V1/PDF/CreditNotePdfController.php \
+            app/Http/Requests/CreateCreditNoteRequest.php \
+            app/Http/Requests/CreditNoteIndexRequest.php \
+            app/Http/Resources/CreditNoteResource.php \
+            app/Models/CreditNote.php \
+            app/Models/CreditNoteItem.php \
+            app/Models/IntegrationSecret.php \
+            app/Policies/CreditNotePolicy.php \
+            database/migrations/2026_07_17_222000_create_credit_notes_tables.php \
+            database/migrations/2026_07_18_000000_add_settlement_fields_to_credit_notes.php \
+            2>&1 | tee pint.log
+      - name: Analyse statique ciblée
+        if: always()
+        run: |
+          set -o pipefail
+          vendor/bin/phpstan analyse \
+            --configuration=phpstan.neon.dist \
+            --no-progress \
+            --memory-limit=1G \
+            2>&1 | tee phpstan.log
+      - name: Publier les journaux qualité PHP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-quality
+          path: |
+            pint.log
+            phpstan.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Dette de format PHP historique
+        continue-on-error: true
+        run: vendor/bin/pint --test
+      - name: Audit dépendances PHP
         if: always()
         run: composer audit || true
 
   frontend:
     name: Frontend Vue historique
     runs-on: ubuntu-latest
-
     steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
-      - name: Installer PHP pour Laravel Vite
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, openssl, pdo_sqlite, tokenizer, xml, zip
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, intl, openssl, tokenizer, xml, zip
           coverage: none
-
-      - name: Préparer Laravel pour Vite
+      - name: Préparer Laravel
         run: |
           cp .env.example .env
           composer install --no-interaction --prefer-dist --no-progress
           php artisan key:generate
-
-      - name: Installer Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '16.20.2'
-
-      - name: Installer les dépendances frontend historiques
+      - name: Installer le frontend
         run: npm install --legacy-peer-deps --no-audit --no-fund
-
-      - name: Vérifier les fichiers frontend modifiés par AutoFacture
+      - name: Lint AutoFacture
         run: >-
           npx eslint
+          resources/scripts/Crater.js
+          resources/scripts/admin/admin-router.js
+          resources/scripts/admin/layouts/LayoutLogin.vue
+          resources/scripts/admin/components/dropdowns/InvoiceIndexDropdown.vue
+          resources/scripts/admin/components/modal-components/CreateCreditNoteModal.vue
+          resources/scripts/admin/stores/credit-note.js
+          resources/scripts/admin/views/credit-notes/Index.vue
+          resources/scripts/admin/views/credit-notes/View.vue
           resources/scripts/admin/views/customers/Create.vue
           resources/scripts/admin/views/settings/CompanyInfoSettings.vue
           resources/scripts/components/icons/MainLogo.vue
           resources/scripts/admin/stub/customer.js
-
-      - name: Auditer le lint historique complet
+      - name: Dette de lint Crater historique
         continue-on-error: true
         run: |
           set -o pipefail
           npm run test 2>&1 | tee frontend-lint.log
-
       - name: Construire le frontend
         run: |
           set -o pipefail
           npm run build 2>&1 | tee frontend-build.log
-
       - name: Publier les journaux frontend
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-logs
+          name: frontend-runtime
           path: |
             frontend-lint.log
             frontend-build.log
           if-no-files-found: ignore
           retention-days: 7
-
-      - name: Inventorier les vulnérabilités NPM
+      - name: Audit dépendances NPM
         if: always()
         run: npm audit --omit=dev || true
 
   docker:
-    name: Docker Compose
+    name: Docker PHP 8.4
     runs-on: ubuntu-latest
-
     steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Valider Docker Compose
         run: docker compose config --quiet
-
-      - name: Construire l'image applicative
-        run: |
-          set -o pipefail
-          docker compose build app 2>&1 | tee docker-build.log
-
-      - name: Publier le journal Docker
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-build
-          path: docker-build.log
-          retention-days: 7
+      - name: Construire l'image
+        run: docker compose build app

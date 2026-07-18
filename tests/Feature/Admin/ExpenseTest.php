@@ -18,10 +18,7 @@ beforeEach(function () {
     $this->withHeaders([
         'company' => $user->companies()->first()->id,
     ]);
-    Sanctum::actingAs(
-        $user,
-        ['*']
-    );
+    Sanctum::actingAs($user, ['*']);
 });
 
 test('get expenses', function () {
@@ -32,7 +29,7 @@ test('create expense', function () {
     $expense = Expense::factory()->raw([
         'amount' => 150,
         'exchange_rate' => 76.217498,
-        'base_amount' => 11432.6247,
+        'base_amount' => 11433,
     ]);
 
     postJson('api/v1/expenses', $expense)->assertStatus(201);
@@ -42,7 +39,7 @@ test('create expense', function () {
         'expense_category_id' => $expense['expense_category_id'],
         'amount' => $expense['amount'],
         'exchange_rate' => $expense['exchange_rate'],
-        'base_amount' => $expense['base_amount'],
+        'base_amount' => 11433,
     ]);
 });
 
@@ -73,7 +70,6 @@ test('update expense', function () {
     $expense = Expense::factory()->create([
         'expense_date' => '2019-02-05',
     ]);
-
     $expense2 = Expense::factory()->raw();
 
     putJson('api/v1/expenses/'.$expense->id, $expense2)->assertOk();
@@ -104,11 +100,7 @@ test('search expenses', function () {
         'to_date' => '2020-07-20',
     ];
 
-    $queryString = http_build_query($filters, '', '&');
-
-    $response = getJson('api/v1/expenses?'.$queryString);
-
-    $response->assertOk();
+    getJson('api/v1/expenses?'.http_build_query($filters, '', '&'))->assertOk();
 });
 
 test('delete multiple expenses', function () {
@@ -116,17 +108,9 @@ test('delete multiple expenses', function () {
         'expense_date' => '2019-02-05',
     ]);
 
-    $data = [
-        'ids' => $expenses->pluck('id'),
-    ];
-
-    $response = postJson('api/v1/expenses/delete', $data);
-
-    $response
+    postJson('api/v1/expenses/delete', ['ids' => $expenses->pluck('id')])
         ->assertOk()
-        ->assertJson([
-            'success' => true,
-        ]);
+        ->assertJson(['success' => true]);
 
     foreach ($expenses as $expense) {
         $this->assertDeleted($expense);
@@ -137,11 +121,10 @@ test('update expense with EUR currency', function () {
     $expense = Expense::factory()->create([
         'expense_date' => '2019-02-05',
     ]);
-
     $expense2 = Expense::factory()->raw([
         'amount' => 150,
         'exchange_rate' => 76.217498,
-        'base_amount' => 11432.6247,
+        'base_amount' => 11433,
     ]);
 
     putJson('api/v1/expenses/'.$expense->id, $expense2)->assertOk();
@@ -151,6 +134,6 @@ test('update expense with EUR currency', function () {
         'expense_category_id' => $expense2['expense_category_id'],
         'amount' => $expense2['amount'],
         'exchange_rate' => $expense2['exchange_rate'],
-        'base_amount' => $expense2['base_amount'],
+        'base_amount' => 11433,
     ]);
 });

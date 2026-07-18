@@ -13,6 +13,7 @@ use Crater\Http\Controllers\V1\Customer\InvoicePdfController as CustomerInvoiceP
 use Crater\Http\Controllers\V1\Customer\PaymentPdfController as CustomerPaymentPdfController;
 use Crater\Http\Controllers\V1\Modules\ScriptController;
 use Crater\Http\Controllers\V1\Modules\StyleController;
+use Crater\Http\Controllers\V1\PDF\CreditNotePdfController;
 use Crater\Http\Controllers\V1\PDF\DownloadReceiptController;
 use Crater\Http\Controllers\V1\PDF\EstimatePdfController;
 use Crater\Http\Controllers\V1\PDF\InvoicePdfController;
@@ -85,10 +86,14 @@ Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
 // ----------------------------------------------
 
 Route::middleware('pdf-auth')->group(function () {
-
-    //  invoice pdf
+    // invoice pdf
     // -------------------------------------------------
     Route::get('/invoices/pdf/{invoice:unique_hash}', InvoicePdfController::class);
+
+    // credit note pdf — accès administrateur avec contexte locataire
+    // -------------------------------------------------
+    Route::get('/credit-notes/pdf/{creditNote:unique_hash}', CreditNotePdfController::class)
+        ->middleware(['company', 'bouncer']);
 
     // estimate pdf
     // -------------------------------------------------
@@ -134,7 +139,7 @@ Route::get('{company:slug}/customer/{vue?}', function (Company $company) {
     return view('app')->with([
         'customer_logo' => get_company_setting('customer_portal_logo', $company->id),
         'current_theme' => get_company_setting('customer_portal_theme', $company->id),
-        'customer_page_title' => get_company_setting('customer_portal_page_title', $company->id)
+        'customer_page_title' => get_company_setting('customer_portal_page_title', $company->id),
     ]);
 })->where('vue', '[\/\w\.-]*')->name('customer.dashboard')->middleware(['install']);
 

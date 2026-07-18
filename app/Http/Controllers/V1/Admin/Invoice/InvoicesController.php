@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Controllers\V1\Admin\Invoice;
 
+use Crater\Domain\Invoicing\InvoiceFinalizer;
 use Crater\Http\Controllers\Controller;
 use Crater\Http\Requests;
 use Crater\Http\Requests\DeleteInvoiceRequest;
@@ -12,44 +13,35 @@ use Illuminate\Http\Request;
 
 class InvoicesController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function index(Request $request)
     {
         $this->authorize('viewAny', Invoice::class);
-
         $limit = $request->has('limit') ? $request->limit : 10;
 
-        $invoices = Invoice::whereCompany()
-            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+        $invoices = Invoice::query()
+            ->join('customers', function ($join): void {
+                $join->on('customers.id', '=', 'invoices.customer_id')
+                    ->on('customers.company_id', '=', 'invoices.company_id');
+            })
             ->applyFilters($request->all())
             ->select('invoices.*', 'customers.name')
-            ->latest()
+            ->latest('invoices.created_at')
             ->paginateData($limit);
 
-        return (InvoiceResource::collection($invoices))
+        return InvoiceResource::collection($invoices)
             ->additional(['meta' => [
-                'invoice_total_count' => Invoice::whereCompany()->count(),
+                'invoice_total_count' => Invoice::query()->count(),
             ]]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function store(Requests\InvoicesRequest $request)
+    public function store(Requests\InvoicesRequest $request, InvoiceFinalizer $finalizer)
     {
         $this->authorize('create', Invoice::class);
-
         $invoice = Invoice::createInvoice($request);
 
-        if ($request->has('invoiceSend')) {
-            $invoice->send($request->subject, $request->body);
+        if ($request->boolean('invoiceSend')) {
+            $invoice = $finalizer->finalize($invoice, $request->user());
+            $invoice->send($request->only(['to', 'subject', 'body']));
         }
 
         GenerateInvoicePdfJob::dispatch($invoice);
@@ -57,12 +49,6 @@ class InvoicesController extends Controller
         return new InvoiceResource($invoice);
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \Crater\Models\Invoice $invoice
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function show(Request $request, Invoice $invoice)
     {
         $this->authorize('view', $invoice);
@@ -70,17 +56,9 @@ class InvoicesController extends Controller
         return new InvoiceResource($invoice);
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request $request
-     * @param  Invoice $invoice
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function update(Requests\InvoicesRequest $request, Invoice $invoice)
     {
         $this->authorize('update', $invoice);
-
         $invoice = $invoice->updateInvoice($request);
 
         if (is_string($invoice)) {
@@ -92,20 +70,25 @@ class InvoicesController extends Controller
         return new InvoiceResource($invoice);
     }
 
-    /**
-     * delete the specified resources in storage.
-     *
-     * @param  \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function delete(DeleteInvoiceRequest $request)
     {
         $this->authorize('delete multiple invoices');
 
+        $lockedNumbers = Invoice::query()
+            ->whereIn('id', $request->ids)
+            ->whereNotNull('finalized_at')
+            ->pluck('invoice_number');
+
+        if ($lockedNumbers->isNotEmpty()) {
+            return response()->json([
+                'message' => 'Les factures finalisées ne peuvent pas être supprimées. Créez un avoir.',
+                'code' => 'FINALIZED_INVOICE_LOCKED',
+                'invoices' => $lockedNumbers,
+            ], 422);
+        }
+
         Invoice::deleteInvoices($request->ids);
 
-        return response()->json([
-            'success' => true,
-        ]);
+        return response()->json(['success' => true]);
     }
 }
