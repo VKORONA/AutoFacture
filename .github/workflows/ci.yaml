@@ -86,9 +86,46 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: Format AutoFacture
-        run: vendor/bin/pint --test app/Domain/Invoicing app/Tenancy app/Security app/Providers/TenancyServiceProvider.php app/Providers/SensitiveDataServiceProvider.php app/Providers/InvoiceIntegrityServiceProvider.php app/Models/CreditNote.php app/Models/CreditNoteItem.php app/Models/IntegrationSecret.php
+        run: |
+          set -o pipefail
+          vendor/bin/pint --test --config pint.json \
+            app/Domain/Invoicing \
+            app/Tenancy \
+            app/Security \
+            app/Providers/TenancyServiceProvider.php \
+            app/Providers/SensitiveDataServiceProvider.php \
+            app/Providers/InvoiceIntegrityServiceProvider.php \
+            app/Http/Controllers/V1/Admin/CreditNote \
+            app/Http/Controllers/V1/PDF/CreditNotePdfController.php \
+            app/Http/Requests/CreateCreditNoteRequest.php \
+            app/Http/Requests/CreditNoteIndexRequest.php \
+            app/Http/Resources/CreditNoteResource.php \
+            app/Models/CreditNote.php \
+            app/Models/CreditNoteItem.php \
+            app/Models/IntegrationSecret.php \
+            app/Policies/CreditNotePolicy.php \
+            database/migrations/2026_07_17_222000_create_credit_notes_tables.php \
+            database/migrations/2026_07_18_000000_add_settlement_fields_to_credit_notes.php \
+            2>&1 | tee pint.log
       - name: Analyse statique ciblée
-        run: vendor/bin/phpstan analyse app/Domain/Invoicing app/Tenancy app/Security --level=3 --no-progress --memory-limit=1G
+        if: always()
+        run: |
+          set -o pipefail
+          vendor/bin/phpstan analyse \
+            --configuration=phpstan.neon.dist \
+            --no-progress \
+            --memory-limit=1G \
+            2>&1 | tee phpstan.log
+      - name: Publier les journaux qualité PHP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-quality
+          path: |
+            pint.log
+            phpstan.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Dette de format PHP historique
         continue-on-error: true
         run: vendor/bin/pint --test
@@ -117,7 +154,18 @@ jobs:
       - name: Installer le frontend
         run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Lint AutoFacture
-        run: npx eslint resources/scripts/admin/views/customers/Create.vue resources/scripts/admin/views/settings/CompanyInfoSettings.vue resources/scripts/components/icons/MainLogo.vue resources/scripts/admin/stub/customer.js
+        run: >-
+          npx eslint
+          resources/scripts/admin/admin-router.js
+          resources/scripts/admin/components/dropdowns/InvoiceIndexDropdown.vue
+          resources/scripts/admin/components/modal-components/CreateCreditNoteModal.vue
+          resources/scripts/admin/stores/credit-note.js
+          resources/scripts/admin/views/credit-notes/Index.vue
+          resources/scripts/admin/views/credit-notes/View.vue
+          resources/scripts/admin/views/customers/Create.vue
+          resources/scripts/admin/views/settings/CompanyInfoSettings.vue
+          resources/scripts/components/icons/MainLogo.vue
+          resources/scripts/admin/stub/customer.js
       - name: Dette de lint Crater historique
         continue-on-error: true
         run: |
