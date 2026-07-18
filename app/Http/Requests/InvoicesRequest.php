@@ -81,9 +81,9 @@ class InvoicesRequest extends FormRequest
 
     public function getInvoicePayload(): array
     {
-        $companyId = (int) $this->header('company');
-        $companyCurrency = CompanySetting::getSetting('currency', $companyId);
         $customer = Customer::findOrFail((int) $this->input('customer_id'));
+        $companyId = (int) ($this->header('company') ?: $customer->company_id);
+        $companyCurrency = CompanySetting::getSetting('currency', $companyId);
 
         $currentCurrency = $this->input('currency_id');
         $exchangeRate = (string) $companyCurrency !== (string) $currentCurrency
