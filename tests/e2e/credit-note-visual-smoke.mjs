@@ -146,8 +146,9 @@ try {
   await fs.writeFile(path.join(outputDir, 'credit-note.pdf'), await pdfResponse.body())
 
   await page.goto(`${baseUrl}/admin/credit-notes`, { waitUntil: 'networkidle' })
-  await waitForText('Remise commerciale validée')
   await waitForText(invoiceNumber)
+  await waitForText('Imputé sur la facture')
+  await page.getByText(/^AV-\d+$/).first().waitFor({ state: 'visible' })
   await screenshot('09-credit-notes-list.png')
 
   await page.setViewportSize({ width: 390, height: 844 })
