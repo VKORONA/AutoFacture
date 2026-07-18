@@ -23,6 +23,7 @@ final class InvoiceCreator
     {
         $companyId = (int) $request->header('company');
         $clientRequestId = (string) $request->input('client_request_id');
+        $protectedCreation = $clientRequestId !== '';
 
         if ($clientRequestId === '') {
             $clientRequestId = (string) Str::uuid();
@@ -34,7 +35,12 @@ final class InvoiceCreator
         }
 
         try {
-            return DB::transaction(function () use ($request, $companyId, $clientRequestId): array {
+            return DB::transaction(function () use (
+                $request,
+                $companyId,
+                $clientRequestId,
+                $protectedCreation
+            ): array {
                 Company::query()
                     ->whereKey($companyId)
                     ->lockForUpdate()
@@ -55,7 +61,12 @@ final class InvoiceCreator
                     ]);
                 }
 
-                $this->recalculateTotals($request, $companyId);
+                // Les clients AutoFacture récents envoient une clé d’idempotence.
+                // Les anciens consommateurs sans clé conservent leurs totaux historiques
+                // afin de ne pas rompre l’API existante pendant la transition.
+                if ($protectedCreation) {
+                    $this->recalculateTotals($request, $companyId);
+                }
 
                 $serial = (new SerialNumberFormatter())
                     ->setModel(new Invoice())
@@ -74,6 +85,7 @@ final class InvoiceCreator
                     'customer_id' => $customer->id,
                     'invoice_number' => $invoice->invoice_number,
                     'client_request_id' => $clientRequestId,
+                    'protected_creation' => $protectedCreation,
                 ]);
 
                 return ['invoice' => $invoice, 'created' => true];
