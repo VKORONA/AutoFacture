@@ -32,6 +32,7 @@ class EncryptedAttribute
             return Crypt::decryptString(substr($value, strlen(self::PREFIX)));
         } catch (DecryptException $exception) {
             report($exception);
+
             return null;
         }
     }
