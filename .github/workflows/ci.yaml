@@ -156,7 +156,9 @@ jobs:
       - name: Lint AutoFacture
         run: >-
           npx eslint
+          resources/scripts/Crater.js
           resources/scripts/admin/admin-router.js
+          resources/scripts/admin/layouts/LayoutLogin.vue
           resources/scripts/admin/components/dropdowns/InvoiceIndexDropdown.vue
           resources/scripts/admin/components/modal-components/CreateCreditNoteModal.vue
           resources/scripts/admin/stores/credit-note.js
