@@ -2,12 +2,17 @@
 
 namespace Crater\Http\Resources;
 
+use Crater\Models\FileDisk;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CompanyResource extends JsonResource
 {
     public function toArray($request)
     {
+        $hasDefaultFileDisk = FileDisk::query()
+            ->whereSetAsDefault(true)
+            ->exists();
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -24,7 +29,7 @@ class CompanyResource extends JsonResource
             'vat_exempt' => (bool) $this->vat_exempt,
             'electronic_invoicing_email' => $this->electronic_invoicing_email,
             'logo' => $this->logo,
-            'logo_path' => $this->logo_path,
+            'logo_path' => $hasDefaultFileDisk ? $this->logo_path : null,
             'unique_hash' => $this->unique_hash,
             'owner_id' => $this->owner_id,
             'slug' => $this->slug,
