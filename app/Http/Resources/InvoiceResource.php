@@ -59,7 +59,7 @@ class InvoiceResource extends JsonResource
             'overdue' => $this->overdue,
             'items' => $this->when($this->items()->exists(), fn () => InvoiceItemResource::collection($this->items)),
             'customer' => $this->when($this->customer()->exists(), fn () => new CustomerResource($this->customer)),
-            'creator' => $this->when($this->creator()->exists(), fn () => new UserResource($this->creator)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
             'taxes' => $this->when($this->taxes()->exists(), fn () => TaxResource::collection($this->taxes)),
             'fields' => $this->when($this->fields()->exists(), fn () => CustomFieldValueResource::collection($this->fields)),
             'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
