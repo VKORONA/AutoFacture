@@ -1,0 +1,23 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - app/Domain/Invoicing
+        - app/Tenancy
+        - app/Security
+        - app/Providers/TenancyServiceProvider.php
+        - app/Providers/SensitiveDataServiceProvider.php
+        - app/Providers/InvoiceIntegrityServiceProvider.php
+        - app/Http/Controllers/V1/Admin/CreditNote
+        - app/Http/Controllers/V1/PDF/CreditNotePdfController.php
+        - app/Http/Requests/CreateCreditNoteRequest.php
+        - app/Http/Requests/CreditNoteIndexRequest.php
+        - app/Http/Resources/CreditNoteResource.php
+        - app/Models/CreditNote.php
+        - app/Models/CreditNoteItem.php
+        - app/Models/IntegrationSecret.php
+        - app/Policies/CreditNotePolicy.php
+    tmpDir: storage/framework/cache/phpstan
