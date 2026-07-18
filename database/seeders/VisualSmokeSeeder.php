@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Crater\Domain\Invoicing\InvoiceFinalizer;
 use Crater\Models\Address;
 use Crater\Models\CompanySetting;
+use Crater\Models\Country;
 use Crater\Models\Currency;
 use Crater\Models\Customer;
 use Crater\Models\Invoice;
@@ -25,6 +26,7 @@ class VisualSmokeSeeder extends Seeder
         $user = User::query()->where('email', 'admin@autofacture.local')->firstOrFail();
         $company = $user->companies()->firstOrFail();
         $currency = Currency::query()->where('code', 'EUR')->firstOrFail();
+        $franceId = (int) Country::query()->where('name', 'France')->valueOrFail('id');
 
         $user->setSettings(['language' => 'fr']);
 
@@ -54,7 +56,7 @@ class VisualSmokeSeeder extends Seeder
             'city' => 'Bouloc',
             'state' => 'Haute-Garonne',
             'zip' => '31620',
-            'country_id' => 1,
+            'country_id' => $franceId,
             'phone' => '05 61 00 00 00',
         ])->save();
 
@@ -83,7 +85,7 @@ class VisualSmokeSeeder extends Seeder
             'city' => 'Toulouse',
             'state' => 'Haute-Garonne',
             'zip' => '31000',
-            'country_id' => 1,
+            'country_id' => $franceId,
             'phone' => '05 61 11 22 33',
         ]);
 
