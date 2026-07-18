@@ -2,9 +2,11 @@
 
 namespace Crater\Domain\Invoicing;
 
+use Carbon\Carbon;
 use Crater\Domain\FrenchInvoicing\FrenchLegalMentionBuilder;
 use Crater\Models\Address;
 use Crater\Models\Company;
+use Crater\Models\Country;
 use Crater\Models\CreditNote;
 use Crater\Models\Currency;
 use Crater\Models\Customer;
@@ -174,9 +176,10 @@ class CreditNoteIssuer
             ->where('customer_id', $customer->id)
             ->where('type', Address::BILLING_TYPE)
             ->first();
+        $rawInvoiceDate = $invoice->getRawOriginal('invoice_date');
 
         return [
-            'schema' => 'autofacture.credit-note.snapshot.v2',
+            'schema' => 'autofacture.credit-note.snapshot.v3',
             'credit_note' => [
                 'number' => $number,
                 'issue_date' => $issueDate,
@@ -191,7 +194,9 @@ class CreditNoteIssuer
             'original_invoice' => [
                 'id' => $invoice->id,
                 'number' => $invoice->invoice_number,
-                'issue_date' => optional($invoice->invoice_date)->format('Y-m-d'),
+                'issue_date' => $rawInvoiceDate
+                    ? Carbon::parse((string) $rawInvoiceDate)->toDateString()
+                    : null,
                 'total' => (int) $invoice->total,
             ],
             'currency' => [
@@ -208,15 +213,7 @@ class CreditNoteIssuer
                 'ape_code' => $company->ape_code,
                 'rcs_city' => $company->rcs_city,
                 'legal_mentions' => $this->legalMentionBuilder->forCompany($company),
-                'address' => $companyAddress?->only([
-                    'name',
-                    'address_street_1',
-                    'address_street_2',
-                    'city',
-                    'state',
-                    'zip',
-                    'country_id',
-                ]),
+                'address' => $this->addressSnapshot($companyAddress),
             ],
             'buyer' => [
                 'name' => $customer->name,
@@ -225,15 +222,7 @@ class CreditNoteIssuer
                 'siret' => $customer->siret,
                 'vat_number' => $customer->vat_number,
                 'ape_code' => $customer->ape_code,
-                'address' => $billingAddress?->only([
-                    'name',
-                    'address_street_1',
-                    'address_street_2',
-                    'city',
-                    'state',
-                    'zip',
-                    'country_id',
-                ]),
+                'address' => $this->addressSnapshot($billingAddress),
             ],
             'lines' => [[
                 'name' => 'Avoir sur facture '.$invoice->invoice_number,
@@ -247,6 +236,29 @@ class CreditNoteIssuer
                 'label' => 'TVA',
                 'amount' => $tax,
             ]],
+        ];
+    }
+
+    /**
+     * @return array<string, string|null>|null
+     */
+    private function addressSnapshot(?Address $address): ?array
+    {
+        if (! $address) {
+            return null;
+        }
+
+        $country = $address->country_id
+            ? Country::query()->whereKey($address->country_id)->value('name')
+            : null;
+
+        return [
+            'street_1' => $address->address_street_1,
+            'street_2' => $address->address_street_2,
+            'postal_code' => $address->zip,
+            'city' => $address->city,
+            'state' => $address->state,
+            'country' => $country ? (string) $country : null,
         ];
     }
 }
