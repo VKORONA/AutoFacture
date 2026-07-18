@@ -2,6 +2,7 @@
 
 namespace Crater\Domain\Invoicing;
 
+use Crater\Domain\FrenchInvoicing\FrenchLegalMentionBuilder;
 use Crater\Models\Company;
 use Crater\Models\CreditNote;
 use Crater\Models\Invoice;
@@ -10,12 +11,14 @@ use DomainException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use LogicException;
 
 class CreditNoteIssuer
 {
-    public function __construct(private InvoiceFinalizer $finalizer)
-    {
-    }
+    public function __construct(
+        private readonly InvoiceFinalizer $finalizer,
+        private readonly FrenchLegalMentionBuilder $legalMentionBuilder,
+    ) {}
 
     public function issue(Invoice $invoice, string $reason, ?int $requestedAmount, ?User $user = null): CreditNote
     {
@@ -27,12 +30,21 @@ class CreditNoteIssuer
             }
 
             $invoice = $this->finalizer->finalize($invoice, $user);
-            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            $invoice = Invoice::query()
+                ->with(['company.address', 'customer.billingAddress', 'currency'])
+                ->lockForUpdate()
+                ->findOrFail($invoice->id);
 
-            $remaining = (int) $invoice->total - (int) $invoice->credited_amount;
+            $reason = trim($reason);
+
+            if (mb_strlen($reason) < 3) {
+                throw new DomainException('Le motif de l’avoir doit contenir au moins trois caractères.');
+            }
+
+            $remaining = max(0, (int) $invoice->total - (int) $invoice->credited_amount);
             $amount = $requestedAmount ?? $remaining;
 
-            if ($remaining <= 0) {
+            if ($remaining === 0) {
                 throw new DomainException('Cette facture a déjà été intégralement créditée.');
             }
 
@@ -46,26 +58,30 @@ class CreditNoteIssuer
                 ->where('company_id', $invoice->company_id)
                 ->max('sequence_number') + 1;
             $number = 'AV-'.str_pad((string) $sequence, 6, '0', STR_PAD_LEFT);
-            $subTotal = $amount === (int) $invoice->total
-                ? (int) $invoice->sub_total
-                : (int) round($amount * ((int) $invoice->sub_total / max(1, (int) $invoice->total)));
-            $tax = $amount - $subTotal;
 
-            $snapshot = [
-                'schema' => 'autofacture.credit-note.snapshot.v1',
-                'credit_note_number' => $number,
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->invoice_number,
-                'company_id' => $invoice->company_id,
-                'customer_id' => $invoice->customer_id,
-                'currency_id' => $invoice->currency_id,
-                'issue_date' => now()->toDateString(),
-                'reason' => $reason,
-                'sub_total' => $subTotal,
-                'tax' => $tax,
-                'total' => $amount,
-            ];
-            $json = json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            [$subTotal, $tax] = $this->allocateAccountingTotals($invoice, $amount, $remaining);
+
+            $previousDueAmount = max(0, (int) $invoice->due_amount);
+            $appliedToBalance = min($amount, $previousDueAmount);
+            $refundableAmount = $amount - $appliedToBalance;
+            $newDueAmount = $previousDueAmount - $appliedToBalance;
+            $issuedAt = now();
+
+            $snapshot = $this->buildSnapshot(
+                invoice: $invoice,
+                number: $number,
+                reason: $reason,
+                subTotal: $subTotal,
+                tax: $tax,
+                total: $amount,
+                appliedToBalance: $appliedToBalance,
+                refundableAmount: $refundableAmount,
+                issueDate: $issuedAt->toDateString(),
+            );
+            $json = json_encode(
+                $snapshot,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            );
 
             $creditNote = CreditNote::query()->create([
                 'company_id' => $invoice->company_id,
@@ -76,14 +92,19 @@ class CreditNoteIssuer
                 'credit_note_number' => $number,
                 'sequence_number' => $sequence,
                 'unique_hash' => (string) Str::uuid(),
-                'issue_date' => now()->toDateString(),
+                'issue_date' => $issuedAt->toDateString(),
                 'reason' => $reason,
                 'status' => CreditNote::STATUS_ISSUED,
+                'settlement_status' => $refundableAmount > 0
+                    ? CreditNote::SETTLEMENT_TO_REFUND
+                    : CreditNote::SETTLEMENT_APPLIED,
                 'exchange_rate' => $invoice->exchange_rate,
                 'sub_total' => $subTotal,
                 'tax' => $tax,
                 'total' => $amount,
-                'finalized_at' => now(),
+                'applied_to_balance' => $appliedToBalance,
+                'refundable_amount' => $refundableAmount,
+                'finalized_at' => $issuedAt,
                 'immutable_hash' => hash('sha256', $json),
                 'finalized_snapshot' => Crypt::encryptString($json),
             ]);
@@ -101,9 +122,129 @@ class CreditNoteIssuer
 
             $invoice->forceFill([
                 'credited_amount' => (int) $invoice->credited_amount + $amount,
+                'due_amount' => $newDueAmount,
+                'base_due_amount' => (int) round($newDueAmount * (float) $invoice->exchange_rate),
             ])->save();
 
-            return $creditNote->fresh(['items', 'invoice', 'customer', 'currency']);
+            $creditNote->load(['items', 'invoice', 'customer.currency', 'currency', 'company.address']);
+
+            return $creditNote;
         }, 3);
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     */
+    private function allocateAccountingTotals(Invoice $invoice, int $amount, int $remaining): array
+    {
+        $alreadyCreditedTax = (int) CreditNote::withoutGlobalScopes()
+            ->where('company_id', $invoice->company_id)
+            ->where('invoice_id', $invoice->id)
+            ->sum('tax');
+
+        $remainingTax = max(0, min($remaining, (int) $invoice->tax - $alreadyCreditedTax));
+        $tax = $amount === $remaining
+            ? $remainingTax
+            : (int) round($amount * ($remainingTax / max(1, $remaining)));
+        $tax = max(0, min($amount, $remainingTax, $tax));
+
+        return [$amount - $tax, $tax];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildSnapshot(
+        Invoice $invoice,
+        string $number,
+        string $reason,
+        int $subTotal,
+        int $tax,
+        int $total,
+        int $appliedToBalance,
+        int $refundableAmount,
+        string $issueDate,
+    ): array {
+        $company = $invoice->company;
+        $customer = $invoice->customer;
+        $currency = $invoice->currency;
+
+        if (! $company || ! $customer || ! $currency) {
+            throw new LogicException('Les données de la facture sont incomplètes pour établir un avoir.');
+        }
+
+        return [
+            'schema' => 'autofacture.credit-note.snapshot.v2',
+            'credit_note' => [
+                'number' => $number,
+                'issue_date' => $issueDate,
+                'reason' => $reason,
+                'status' => CreditNote::STATUS_ISSUED,
+                'sub_total' => $subTotal,
+                'tax' => $tax,
+                'total' => $total,
+                'applied_to_balance' => $appliedToBalance,
+                'refundable_amount' => $refundableAmount,
+            ],
+            'original_invoice' => [
+                'id' => $invoice->id,
+                'number' => $invoice->invoice_number,
+                'issue_date' => optional($invoice->invoice_date)->format('Y-m-d'),
+                'total' => (int) $invoice->total,
+            ],
+            'currency' => [
+                'id' => $currency->id,
+                'code' => $currency->code,
+                'symbol' => $currency->symbol,
+            ],
+            'seller' => [
+                'name' => $company->name,
+                'legal_form' => $company->legal_form,
+                'siren' => $company->siren,
+                'siret' => $company->siret,
+                'vat_number' => $company->vat_number,
+                'ape_code' => $company->ape_code,
+                'rcs_city' => $company->rcs_city,
+                'legal_mentions' => $this->legalMentionBuilder->forCompany($company),
+                'address' => optional($company->address)->only([
+                    'name',
+                    'address_street_1',
+                    'address_street_2',
+                    'city',
+                    'state',
+                    'zip',
+                    'country_id',
+                ]),
+            ],
+            'buyer' => [
+                'name' => $customer->name,
+                'company_name' => $customer->company_name,
+                'siren' => $customer->siren,
+                'siret' => $customer->siret,
+                'vat_number' => $customer->vat_number,
+                'ape_code' => $customer->ape_code,
+                'address' => optional($customer->billingAddress)->only([
+                    'name',
+                    'address_street_1',
+                    'address_street_2',
+                    'city',
+                    'state',
+                    'zip',
+                    'country_id',
+                ]),
+            ],
+            'lines' => [[
+                'name' => 'Avoir sur facture '.$invoice->invoice_number,
+                'description' => $reason,
+                'quantity' => 1,
+                'sub_total' => $subTotal,
+                'tax' => $tax,
+                'total' => $total,
+            ]],
+            'tax_breakdown' => [[
+                'label' => 'TVA',
+                'amount' => $tax,
+            ]],
+        ];
     }
 }
