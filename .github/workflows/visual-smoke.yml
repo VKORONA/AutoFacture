@@ -97,7 +97,6 @@ jobs:
             php artisan key:generate
             php artisan migrate:fresh --force
             php artisan db:seed --class=DatabaseSeeder --force
-            php artisan db:seed --class=DemoSeeder --force
             php artisan db:seed --class=VisualSmokeSeeder --force
           } 2>&1 | tee artifacts/visual-smoke/backend-install.log
 
