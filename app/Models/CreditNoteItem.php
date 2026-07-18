@@ -34,11 +34,13 @@ class CreditNoteItem extends Model
         ];
     }
 
+    /** @return BelongsTo<CreditNote, $this> */
     public function creditNote(): BelongsTo
     {
         return $this->belongsTo(CreditNote::class);
     }
 
+    /** @return BelongsTo<InvoiceItem, $this> */
     public function invoiceItem(): BelongsTo
     {
         return $this->belongsTo(InvoiceItem::class);
