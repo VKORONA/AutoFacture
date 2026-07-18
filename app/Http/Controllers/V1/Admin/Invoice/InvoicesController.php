@@ -115,7 +115,7 @@ class InvoicesController extends Controller
                 'delivery_status' => $deliveryStatus,
                 'delivery_error' => $deliveryError,
             ],
-        ], $created ? 201 : 200);
+        ]);
     }
 
     public function show(Request $request, Invoice $invoice)
