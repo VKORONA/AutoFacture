@@ -1,0 +1,127 @@
+name: AutoFacture Visual Smoke
+
+on:
+  push:
+    branches:
+      - develop/hardening-modernization
+    paths:
+      - '.github/workflows/visual-smoke.yml'
+      - 'app/**'
+      - 'config/**'
+      - 'database/**'
+      - 'resources/**'
+      - 'routes/**'
+      - 'tests/e2e/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+concurrency:
+  group: autofacture-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  credit-note-flow:
+    name: Parcours visuel facture vers avoir
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: autofacture_visual
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      APP_ENV: local
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: autofacture_visual
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      E2E_BASE_URL: http://127.0.0.1:8000
+      E2E_OUTPUT_DIR: artifacts/visual-smoke
+      E2E_EMAIL: admin@autofacture.local
+      E2E_PASSWORD: autofacture-dev
+      E2E_INVOICE_NUMBER: FAC-VISUEL-000001
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, intl, openssl, pdo_mysql, tokenizer, xml, zip
+          coverage: none
+
+      - name: Installer le backend
+        run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+          php artisan migrate:fresh --force
+          php artisan db:seed --class=DatabaseSeeder --force
+          php artisan db:seed --class=DemoSeeder --force
+          php artisan db:seed --class=VisualSmokeSeeder --force
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+
+      - name: Construire l'interface Vue
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+
+      - name: Installer Playwright
+        run: |
+          npm install --no-save --legacy-peer-deps playwright@1.48.2
+          npx playwright install --with-deps chromium
+
+      - name: Démarrer AutoFacture
+        run: |
+          mkdir -p artifacts/visual-smoke
+          php artisan serve --host=127.0.0.1 --port=8000 > artifacts/visual-smoke/laravel-server.log 2>&1 &
+          echo $! > artifacts/visual-smoke/laravel-server.pid
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:8000/login > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat artifacts/visual-smoke/laravel-server.log
+          exit 1
+
+      - name: Exécuter le parcours visuel
+        run: node tests/e2e/credit-note-visual-smoke.mjs
+
+      - name: Publier les captures et le PDF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: credit-note-visual-smoke
+          path: artifacts/visual-smoke
+          if-no-files-found: error
+          retention-days: 14
