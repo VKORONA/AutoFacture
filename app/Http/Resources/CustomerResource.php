@@ -45,7 +45,7 @@ class CustomerResource extends JsonResource
             'fields' => $this->when($this->fields()->exists(), function () {
                 return CustomFieldValueResource::collection($this->fields);
             }),
-            'company' => $this->when($this->company()->exists(), function () {
+            'company' => $this->whenLoaded('company', function () {
                 return new CompanyResource($this->company);
             }),
             'currency' => $this->when($this->currency()->exists(), function () {
