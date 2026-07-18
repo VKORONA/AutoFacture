@@ -2,6 +2,9 @@
 
 namespace Crater\Domain\Invoicing;
 
+use Crater\Models\Address;
+use Crater\Models\Company;
+use Crater\Models\Customer;
 use Crater\Models\Invoice;
 use Crater\Models\InvoiceItem;
 use Crater\Models\Tax;
@@ -17,16 +20,7 @@ class InvoiceFinalizer
     public function finalize(Invoice $invoice, ?User $user = null): Invoice
     {
         return DB::transaction(function () use ($invoice, $user): Invoice {
-            $locked = Invoice::query()
-                ->with([
-                    'items.taxes',
-                    'taxes',
-                    'customer.billingAddress',
-                    'customer.shippingAddress',
-                    'company.address',
-                ])
-                ->lockForUpdate()
-                ->findOrFail($invoice->id);
+            $locked = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
 
             if ($locked->finalized_at) {
                 return $locked;
@@ -48,13 +42,6 @@ class InvoiceFinalizer
                 'immutable_hash' => hash('sha256', $json),
                 'finalized_snapshot' => Crypt::encryptString($json),
             ])->save();
-
-            $locked->load([
-                'items.taxes',
-                'taxes',
-                'customer',
-                'company',
-            ]);
 
             return $locked;
         }, 3);
@@ -82,17 +69,38 @@ class InvoiceFinalizer
      */
     private function snapshot(Invoice $invoice): array
     {
-        $company = $invoice->company;
-        $customer = $invoice->customer;
+        $company = Company::query()->findOrFail($invoice->company_id);
+        $customer = Customer::query()->findOrFail($invoice->customer_id);
+        $companyAddress = Address::query()
+            ->where('company_id', $company->id)
+            ->first();
+        $billingAddress = Address::query()
+            ->where('customer_id', $customer->id)
+            ->where('type', Address::BILLING_TYPE)
+            ->first();
+
+        /** @var Collection<int, InvoiceItem> $items */
+        $items = InvoiceItem::query()
+            ->where('invoice_id', $invoice->id)
+            ->orderBy('id')
+            ->get();
+
+        /** @var Collection<int, Tax> $invoiceTaxes */
+        $invoiceTaxes = Tax::query()
+            ->where('invoice_id', $invoice->id)
+            ->orderBy('id')
+            ->get();
+
+        /** @var Collection<int, Tax> $itemTaxes */
+        $itemTaxes = Tax::query()
+            ->whereIn('invoice_item_id', $items->pluck('id'))
+            ->orderBy('id')
+            ->get();
+        $itemTaxesByItem = $itemTaxes->groupBy('invoice_item_id');
 
         if (! $company || ! $customer) {
             throw new LogicException('Les données vendeur ou client de la facture sont incomplètes.');
         }
-
-        /** @var Collection<int, InvoiceItem> $items */
-        $items = $invoice->items;
-        /** @var Collection<int, Tax> $invoiceTaxes */
-        $invoiceTaxes = $invoice->taxes;
 
         return [
             'schema' => 'autofacture.invoice.snapshot.v1',
@@ -121,7 +129,7 @@ class InvoiceFinalizer
                 'siret' => $company->siret,
                 'vat_number' => $company->vat_number,
                 'ape_code' => $company->ape_code,
-                'address' => optional($company->address)->only([
+                'address' => $companyAddress?->only([
                     'name',
                     'address_street_1',
                     'address_street_2',
@@ -138,7 +146,7 @@ class InvoiceFinalizer
                 'siren' => $customer->siren,
                 'siret' => $customer->siret,
                 'vat_number' => $customer->vat_number,
-                'billing_address' => optional($customer->billingAddress)->only([
+                'billing_address' => $billingAddress?->only([
                     'name',
                     'address_street_1',
                     'address_street_2',
@@ -148,9 +156,9 @@ class InvoiceFinalizer
                     'country_id',
                 ]),
             ],
-            'items' => $items->sortBy('id')->values()->map(function (InvoiceItem $item): array {
+            'items' => $items->map(function (InvoiceItem $item) use ($itemTaxesByItem): array {
                 /** @var Collection<int, Tax> $taxes */
-                $taxes = $item->taxes;
+                $taxes = $itemTaxesByItem->get($item->id, new Collection);
 
                 return [
                     'id' => $item->id,
@@ -162,7 +170,7 @@ class InvoiceFinalizer
                     'discount_val' => (int) $item->discount_val,
                     'tax' => (int) $item->tax,
                     'total' => (int) $item->total,
-                    'taxes' => $taxes->sortBy('id')->values()->map(fn (Tax $tax): array => [
+                    'taxes' => $taxes->map(fn (Tax $tax): array => [
                         'tax_type_id' => $tax->tax_type_id,
                         'name' => $tax->name,
                         'percent' => (string) $tax->percent,
@@ -170,7 +178,7 @@ class InvoiceFinalizer
                     ])->all(),
                 ];
             })->all(),
-            'taxes' => $invoiceTaxes->sortBy('id')->values()->map(fn (Tax $tax): array => [
+            'taxes' => $invoiceTaxes->map(fn (Tax $tax): array => [
                 'tax_type_id' => $tax->tax_type_id,
                 'name' => $tax->name,
                 'percent' => (string) $tax->percent,
