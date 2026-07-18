@@ -123,16 +123,23 @@ jobs:
           php artisan serve --host=127.0.0.1 --port=8000 > artifacts/visual-smoke/laravel-server.log 2>&1 &
           echo $! > artifacts/visual-smoke/laravel-server.pid
           for attempt in $(seq 1 40); do
-            if curl --fail --silent http://127.0.0.1:8000/login > /dev/null; then
+            status=$(curl --silent --output artifacts/visual-smoke/login-response.html --write-out '%{http_code}' http://127.0.0.1:8000/login || true)
+            echo "Tentative ${attempt}: HTTP ${status}" | tee -a artifacts/visual-smoke/readiness.log
+            if [ "$status" = "200" ] || [ "$status" = "302" ]; then
               exit 0
             fi
             sleep 1
           done
           cat artifacts/visual-smoke/laravel-server.log
+          cp storage/logs/laravel.log artifacts/visual-smoke/laravel.log 2>/dev/null || true
           exit 1
 
       - name: Exécuter le parcours visuel
         run: node tests/e2e/credit-note-visual-smoke.mjs
+
+      - name: Copier le journal Laravel
+        if: always()
+        run: cp storage/logs/laravel.log artifacts/visual-smoke/laravel.log 2>/dev/null || true
 
       - name: Publier les captures et le PDF
         if: always()
