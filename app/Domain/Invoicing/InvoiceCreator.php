@@ -55,7 +55,7 @@ final class InvoiceCreator
                     ->where('company_id', $companyId)
                     ->first();
 
-                if (!$customer) {
+                if (! $customer) {
                     throw ValidationException::withMessages([
                         'customer_id' => 'Le client sélectionné n’appartient pas à l’entreprise active.',
                     ]);
