@@ -154,7 +154,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 })
   await screenshot('10-credit-notes-list-mobile.png')
 
-  await page.getByText(/^AV-\d+$/).first().click()
+  await page.getByText('Consulter l’avoir', { exact: true }).click()
   await page.waitForURL(/\/admin\/credit-notes\/\d+\/view/)
   await waitForText('Émis et scellé')
   await screenshot('11-credit-note-view-mobile.png')
