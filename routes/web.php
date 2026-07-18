@@ -28,6 +28,7 @@ Route::get('/modules/styles/{style}', StyleController::class);
 
 Route::get('/modules/scripts/{script}', ScriptController::class);
 
+
 // Admin Auth
 // ----------------------------------------------
 
@@ -36,6 +37,7 @@ Route::post('login', [LoginController::class, 'login']);
 Route::post('auth/logout', function () {
     Auth::guard('web')->logout();
 });
+
 
 // Customer auth
 // ----------------------------------------------
@@ -46,10 +48,12 @@ Route::post('/{company:slug}/customer/logout', function () {
     Auth::guard('customer')->logout();
 });
 
+
 // Report PDF & Expense Endpoints
 // ----------------------------------------------
 
 Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
+
     // sales report by customer
     //----------------------------------
     Route::get('/sales/customers/{hash}', CustomerSalesReportController::class);
@@ -70,11 +74,13 @@ Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
     //----------------------------------
     Route::get('/profit-loss/{hash}', ProfitLossReportController::class);
 
+
     // download expense receipt
     // -------------------------------------------------
     Route::get('/expenses/{expense}/download-receipt', DownloadReceiptController::class);
     Route::get('/expenses/{expense}/receipt', ShowReceiptController::class);
 });
+
 
 // PDF Endpoints
 // ----------------------------------------------
@@ -84,9 +90,10 @@ Route::middleware('pdf-auth')->group(function () {
     // -------------------------------------------------
     Route::get('/invoices/pdf/{invoice:unique_hash}', InvoicePdfController::class);
 
-    // credit note pdf
+    // credit note pdf — accès administrateur avec contexte locataire
     // -------------------------------------------------
-    Route::get('/credit-notes/pdf/{creditNote:unique_hash}', CreditNotePdfController::class);
+    Route::get('/credit-notes/pdf/{creditNote:unique_hash}', CreditNotePdfController::class)
+        ->middleware(['company', 'bouncer']);
 
     // estimate pdf
     // -------------------------------------------------
@@ -96,6 +103,7 @@ Route::middleware('pdf-auth')->group(function () {
     // -------------------------------------------------
     Route::get('/payments/pdf/{payment:unique_hash}', PaymentPdfController::class);
 });
+
 
 // customer pdf endpoints for invoice, estimate and Payment
 // -------------------------------------------------
@@ -111,12 +119,14 @@ Route::prefix('/customer')->group(function () {
     Route::get('/payments/view/{email_log:token}', [CustomerPaymentPdfController::class, 'getPdf'])->name('payment');
 });
 
+
 // Setup for installation of app
 // ----------------------------------------------
 
 Route::get('/installation', function () {
     return view('app');
 })->name('install')->middleware('redirect-if-installed');
+
 
 // Move other http requests to the Vue App
 // -------------------------------------------------
