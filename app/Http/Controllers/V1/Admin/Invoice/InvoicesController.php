@@ -97,7 +97,6 @@ class InvoicesController extends Controller
                 'items.fields.customField',
                 'customer',
                 'taxes',
-                'company',
                 'currency',
             ])
             ->findOrFail($invoice->id);
