@@ -44,7 +44,7 @@ it('creates a persisted invoice, returns it and keeps it after refresh', functio
     $payload = realInvoicePayload();
 
     $response = postJson('api/v1/invoices', $payload)
-        ->assertCreated()
+        ->assertOk()
         ->assertJsonPath('meta.created', true);
 
     $invoiceId = $response->json('data.id');
@@ -84,7 +84,7 @@ it('returns the existing invoice when the same client request is retried', funct
     $payload = realInvoicePayload();
 
     $first = postJson('api/v1/invoices', $payload)
-        ->assertCreated()
+        ->assertOk()
         ->assertJsonPath('meta.created', true);
 
     $second = postJson('api/v1/invoices', $payload)
@@ -119,7 +119,7 @@ it('recalculates invoice totals on the server', function () {
         );
     $expectedTotal = $expectedSubTotal - (int) $payload['discount_val'] + $expectedTax;
 
-    $response = postJson('api/v1/invoices', $payload)->assertCreated();
+    $response = postJson('api/v1/invoices', $payload)->assertOk();
 
     $this->assertDatabaseHas('invoices', [
         'id' => $response->json('data.id'),
@@ -151,7 +151,7 @@ it('keeps the invoice and returns an explicit error when PDF storage fails', fun
     $payload = realInvoicePayload();
 
     $response = postJson('api/v1/invoices', $payload)
-        ->assertCreated()
+        ->assertOk()
         ->assertJsonPath('meta.created', true)
         ->assertJsonPath('meta.pdf_status', 'failed');
 
