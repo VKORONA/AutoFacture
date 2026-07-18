@@ -3,15 +3,17 @@
 namespace Crater\Domain\Invoicing;
 
 use Crater\Domain\FrenchInvoicing\FrenchLegalMentionBuilder;
+use Crater\Models\Address;
 use Crater\Models\Company;
 use Crater\Models\CreditNote;
+use Crater\Models\Currency;
+use Crater\Models\Customer;
 use Crater\Models\Invoice;
 use Crater\Models\User;
 use DomainException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use LogicException;
 
 class CreditNoteIssuer
 {
@@ -30,10 +32,7 @@ class CreditNoteIssuer
             }
 
             $invoice = $this->finalizer->finalize($invoice, $user);
-            $invoice = Invoice::query()
-                ->with(['company.address', 'customer.billingAddress', 'currency'])
-                ->lockForUpdate()
-                ->findOrFail($invoice->id);
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
 
             $reason = trim($reason);
 
@@ -126,7 +125,7 @@ class CreditNoteIssuer
                 'base_due_amount' => (int) round($newDueAmount * (float) $invoice->exchange_rate),
             ])->save();
 
-            $creditNote->load(['items', 'invoice', 'customer.currency', 'currency', 'company.address']);
+            $creditNote->load(['items', 'invoice', 'customer.currency', 'currency']);
 
             return $creditNote;
         }, 3);
@@ -165,13 +164,16 @@ class CreditNoteIssuer
         int $refundableAmount,
         string $issueDate,
     ): array {
-        $company = $invoice->company;
-        $customer = $invoice->customer;
-        $currency = $invoice->currency;
-
-        if (! $company || ! $customer || ! $currency) {
-            throw new LogicException('Les données de la facture sont incomplètes pour établir un avoir.');
-        }
+        $company = Company::query()->findOrFail($invoice->company_id);
+        $customer = Customer::query()->findOrFail($invoice->customer_id);
+        $currency = Currency::query()->findOrFail($invoice->currency_id);
+        $companyAddress = Address::query()
+            ->where('company_id', $company->id)
+            ->first();
+        $billingAddress = Address::query()
+            ->where('customer_id', $customer->id)
+            ->where('type', Address::BILLING_TYPE)
+            ->first();
 
         return [
             'schema' => 'autofacture.credit-note.snapshot.v2',
@@ -206,7 +208,7 @@ class CreditNoteIssuer
                 'ape_code' => $company->ape_code,
                 'rcs_city' => $company->rcs_city,
                 'legal_mentions' => $this->legalMentionBuilder->forCompany($company),
-                'address' => optional($company->address)->only([
+                'address' => $companyAddress?->only([
                     'name',
                     'address_street_1',
                     'address_street_2',
@@ -223,7 +225,7 @@ class CreditNoteIssuer
                 'siret' => $customer->siret,
                 'vat_number' => $customer->vat_number,
                 'ape_code' => $customer->ape_code,
-                'address' => optional($customer->billingAddress)->only([
+                'address' => $billingAddress?->only([
                     'name',
                     'address_street_1',
                     'address_street_2',
