@@ -10,6 +10,7 @@ use Crater\Models\Invoice;
 use Crater\Services\SerialNumberFormatter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -22,6 +23,11 @@ final class InvoiceCreator
     {
         $companyId = (int) $request->header('company');
         $clientRequestId = (string) $request->input('client_request_id');
+
+        if ($clientRequestId === '') {
+            $clientRequestId = (string) Str::uuid();
+            $request->merge(['client_request_id' => $clientRequestId]);
+        }
 
         if ($existing = $this->findExisting($companyId, $clientRequestId)) {
             return ['invoice' => $existing, 'created' => false];
@@ -87,20 +93,9 @@ final class InvoiceCreator
 
     private function findExisting(int $companyId, string $clientRequestId): ?Invoice
     {
-        if ($clientRequestId === '') {
-            return null;
-        }
-
         return Invoice::query()
             ->where('company_id', $companyId)
             ->where('client_request_id', $clientRequestId)
-            ->with([
-                'items',
-                'items.fields',
-                'items.fields.customField',
-                'customer',
-                'taxes',
-            ])
             ->first();
     }
 
