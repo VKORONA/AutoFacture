@@ -2,23 +2,35 @@
 
 namespace Crater\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class IntegrationSecret extends Model
 {
-    use HasFactory;
-
-    protected $guarded = ['id'];
-
-    protected $hidden = ['secret'];
-
-    protected $casts = [
-        'secret' => 'encrypted:array',
-        'last_used_at' => 'datetime',
+    protected $fillable = [
+        'company_id',
+        'provider',
+        'name',
+        'secret',
+        'last_used_at',
     ];
 
-    public function company()
+    protected $hidden = [
+        'secret',
+    ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'secret' => 'encrypted:array',
+            'last_used_at' => 'datetime',
+        ];
+    }
+
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
