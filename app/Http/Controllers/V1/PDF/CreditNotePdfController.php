@@ -7,7 +7,6 @@ use Crater\Http\Controllers\Controller;
 use Crater\Models\CreditNote;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
-use JsonException;
 use Throwable;
 
 class CreditNotePdfController extends Controller
@@ -19,7 +18,7 @@ class CreditNotePdfController extends Controller
         try {
             $json = Crypt::decryptString((string) $creditNote->finalized_snapshot);
             $document = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException|Throwable $exception) {
+        } catch (Throwable $exception) {
             report($exception);
             abort(409, 'Le document scellé de cet avoir ne peut pas être lu.');
         }
