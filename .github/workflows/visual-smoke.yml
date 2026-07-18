@@ -72,6 +72,8 @@ jobs:
       SESSION_DRIVER: file
       CACHE_STORE: file
       QUEUE_CONNECTION: sync
+      SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:8000,localhost:8000
+      SESSION_DOMAIN: 127.0.0.1
       E2E_BASE_URL: http://127.0.0.1:8000
       E2E_OUTPUT_DIR: artifacts/visual-smoke
       E2E_EMAIL: admin@autofacture.local
