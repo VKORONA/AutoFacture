@@ -17,7 +17,16 @@ trait GeneratesMenuTrait
             return $menu;
         }
 
-        foreach (config($configKey, []) as $data) {
+        $configuredMenu = config($configKey, []);
+
+        if ($key === 'main_menu') {
+            $configuredMenu = array_merge(
+                $configuredMenu,
+                config('autofacture.additional_main_menu', []),
+            );
+        }
+
+        foreach ($configuredMenu as $data) {
             if (! $this->isMenuFeatureEnabled($key, $data['name'])) {
                 continue;
             }
