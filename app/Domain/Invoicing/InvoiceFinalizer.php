@@ -12,7 +12,6 @@ use Crater\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use LogicException;
 use Throwable;
 
 class InvoiceFinalizer
@@ -97,10 +96,6 @@ class InvoiceFinalizer
             ->orderBy('id')
             ->get();
         $itemTaxesByItem = $itemTaxes->groupBy('invoice_item_id');
-
-        if (! $company || ! $customer) {
-            throw new LogicException('Les données vendeur ou client de la facture sont incomplètes.');
-        }
 
         return [
             'schema' => 'autofacture.invoice.snapshot.v1',
