@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__.'/FakerCompatibility.php';
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

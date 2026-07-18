@@ -2,43 +2,92 @@
 
 namespace Database\Seeders;
 
+use Crater\Domain\FrenchInvoicing\FrenchCompanyDefaults;
 use Crater\Models\Company;
+use Crater\Models\Country;
+use Crater\Models\Currency;
 use Crater\Models\Setting;
 use Crater\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Silber\Bouncer\BouncerFacade;
 use Vinkla\Hashids\Facades\Hashids;
 
 class UsersTableSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
     public function run()
     {
-        $user = User::create([
-            'email' => 'admin@craterapp.com',
-            'name' => 'Jane Doe',
-            'role' => 'super admin',
-            'password' => 'crater@123',
-        ]);
+        $this->stabilizeReferenceIdsForTests();
 
-        $company = Company::create([
-            'name' => 'xyz',
-            'owner_id' => $user->id,
-            'slug' => 'xyz'
-        ]);
+        $user = User::query()->where('email', 'admin@autofacture.local')->first();
+
+        if (! $user) {
+            $user = new User();
+
+            if (app()->environment('testing')) {
+                $user->id = 1;
+            }
+
+            $user->fill([
+                'email' => 'admin@autofacture.local',
+                'name' => 'Administrateur AutoFacture',
+                'role' => 'super admin',
+                'password' => 'autofacture-dev',
+            ]);
+            $user->save();
+        }
+
+        $company = Company::query()->where('slug', 'entreprise-demonstration')->first();
+
+        if (! $company) {
+            $company = new Company();
+
+            if (app()->environment('testing')) {
+                $company->id = 1;
+            }
+
+            $company->fill([
+                'name' => 'Entreprise de démonstration',
+                'owner_id' => $user->id,
+                'slug' => 'entreprise-demonstration',
+            ]);
+            $company->save();
+        }
 
         $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
         $company->save();
         $company->setupDefaultData();
-        $user->companies()->attach($company->id);
-        BouncerFacade::scope()->to($company->id);
 
+        $euroId = Currency::where('code', 'EUR')->value('id');
+        app(FrenchCompanyDefaults::class)->apply($company, $euroId);
+
+        $user->companies()->syncWithoutDetaching([$company->id]);
+        BouncerFacade::scope()->to($company->id);
         $user->assign('super admin');
 
         Setting::setSetting('profile_complete', 0);
+    }
+
+    private function stabilizeReferenceIdsForTests(): void
+    {
+        if (! app()->environment('testing')) {
+            return;
+        }
+
+        if (! Currency::query()->whereKey(1)->exists()) {
+            $currencyId = Currency::query()->orderBy('id')->value('id');
+
+            if ($currencyId) {
+                DB::table('currencies')->where('id', $currencyId)->update(['id' => 1]);
+            }
+        }
+
+        if (! Country::query()->whereKey(1)->exists()) {
+            $countryId = Country::query()->orderBy('id')->value('id');
+
+            if ($countryId) {
+                DB::table('countries')->where('id', $countryId)->update(['id' => 1]);
+            }
+        }
     }
 }

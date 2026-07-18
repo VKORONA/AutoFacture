@@ -5,123 +5,90 @@ namespace Database\Factories;
 use Crater\Models\Currency;
 use Crater\Models\Customer;
 use Crater\Models\Invoice;
-use Crater\Models\RecurringInvoice;
 use Crater\Models\User;
 use Crater\Services\SerialNumberFormatter;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class InvoiceFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
     protected $model = Invoice::class;
 
     public function sent()
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'status' => Invoice::STATUS_SENT,
-            ];
-        });
+        return $this->state(fn () => ['status' => Invoice::STATUS_SENT]);
     }
 
     public function viewed()
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'status' => Invoice::STATUS_VIEWED,
-            ];
-        });
+        return $this->state(fn () => ['status' => Invoice::STATUS_VIEWED]);
     }
 
     public function completed()
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'status' => Invoice::STATUS_COMPLETED,
-            ];
-        });
+        return $this->state(fn () => ['status' => Invoice::STATUS_COMPLETED]);
     }
 
     public function unpaid()
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'status' => Invoice::STATUS_UNPAID,
-            ];
-        });
+        return $this->state(fn () => ['status' => Invoice::STATUS_UNPAID]);
     }
 
     public function partiallyPaid()
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'status' => Invoice::STATUS_PARTIALLY_PAID,
-            ];
-        });
+        return $this->state(fn () => ['status' => Invoice::STATUS_PARTIALLY_PAID]);
     }
 
     public function paid()
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'status' => Invoice::STATUS_PAID,
-            ];
-        });
+        return $this->state(fn () => ['status' => Invoice::STATUS_PAID]);
     }
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
-    public function definition()
+    public function definition(): array
     {
-        $sequenceNumber = (new SerialNumberFormatter())
+        $user = User::query()->where('role', 'super admin')->firstOrFail();
+        $companyId = $user->companies()->firstOrFail()->id;
+        $sequence = (new SerialNumberFormatter())
             ->setModel(new Invoice())
-            ->setCompany(User::find(1)->companies()->first()->id)
+            ->setCompany($companyId)
             ->setNextNumbers();
+        $total = $this->faker->numberBetween(100, 10000);
+        $subTotal = $this->faker->numberBetween($total, $total + 2000);
+        $tax = max(0, $total - $subTotal);
+        $exchangeRate = $this->faker->randomFloat(6, 0.1, 100);
 
         return [
+            'creator_id' => $user->id,
             'invoice_date' => $this->faker->date('Y-m-d', 'now'),
-            'due_date' => $this->faker->date('Y-m-d', 'now'),
-            'invoice_number' => $sequenceNumber->getNextNumber(),
-            'sequence_number' => $sequenceNumber->nextSequenceNumber,
-            'customer_sequence_number' => $sequenceNumber->nextCustomerSequenceNumber,
-            'reference_number' => $sequenceNumber->getNextNumber(),
+            'due_date' => $this->faker->date('Y-m-d', '+30 days'),
+            'invoice_number' => $sequence->getNextNumber(),
+            'sequence_number' => $sequence->nextSequenceNumber,
+            'customer_sequence_number' => $sequence->nextCustomerSequenceNumber,
+            'reference_number' => $sequence->getNextNumber(),
             'template_name' => 'invoice1',
             'status' => Invoice::STATUS_DRAFT,
             'tax_per_item' => 'NO',
             'discount_per_item' => 'NO',
             'paid_status' => Invoice::STATUS_UNPAID,
-            'company_id' => User::find(1)->companies()->first()->id,
-            'sub_total' => $this->faker->randomDigitNotNull,
-            'total' => $this->faker->randomDigitNotNull,
-            'discount_type' => $this->faker->randomElement(['percentage', 'fixed']),
-            'discount_val' => function (array $invoice) {
-                return $invoice['discount_type'] == 'percentage' ? $this->faker->numberBetween($min = 0, $max = 100) : $this->faker->randomDigitNotNull;
-            },
-            'discount' => function (array $invoice) {
-                return $invoice['discount_type'] == 'percentage' ? (($invoice['discount_val'] * $invoice['total']) / 100) : $invoice['discount_val'];
-            },
-            'tax' => $this->faker->randomDigitNotNull,
-            'due_amount' => function (array $invoice) {
-                return $invoice['total'];
-            },
+            'company_id' => $companyId,
+            'sub_total' => $subTotal,
+            'total' => $total,
+            'discount_type' => 'fixed',
+            'discount_val' => 0,
+            'discount' => 0,
+            'tax' => $tax,
+            'due_amount' => $total,
             'notes' => $this->faker->text(80),
-            'unique_hash' => str_random(60),
+            'unique_hash' => Str::random(60),
             'customer_id' => Customer::factory(),
-            'recurring_invoice_id' => RecurringInvoice::factory(),
-            'exchange_rate' => $this->faker->randomDigitNotNull,
-            'base_discount_val' => $this->faker->randomDigitNotNull,
-            'base_sub_total' => $this->faker->randomDigitNotNull,
-            'base_total' => $this->faker->randomDigitNotNull,
-            'base_tax' => $this->faker->randomDigitNotNull,
-            'base_due_amount' => $this->faker->randomDigitNotNull,
-            'currency_id' => Currency::find(1)->id,
+            'recurring_invoice_id' => null,
+            'exchange_rate' => $exchangeRate,
+            'base_discount_val' => 0,
+            'base_sub_total' => (int) round($subTotal * $exchangeRate),
+            'base_total' => (int) round($total * $exchangeRate),
+            'base_tax' => (int) round($tax * $exchangeRate),
+            'base_due_amount' => (int) round($total * $exchangeRate),
+            'currency_id' => Currency::query()->valueOrFail('id'),
         ];
     }
 }

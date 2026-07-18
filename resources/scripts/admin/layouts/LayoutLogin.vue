@@ -78,7 +78,7 @@
 
       <LoginBackgroundOverlay class="absolute h-full w-full right-[7.5%]" />
 
-      <div class="md:pl-10 xl:pl-0 relative z-50 w-7/12 xl:w-5/12 xl:w-5/12">
+      <div class="md:pl-10 xl:pl-0 relative z-50 w-7/12 xl:w-5/12">
         <h1
           class="
             hidden
@@ -134,14 +134,14 @@ import LoginBackground from '@/scripts/components/svg/LoginBackground.vue'
 import LoginPlanetCrater from '@/scripts/components/svg/LoginPlanetCrater.vue'
 import LoginBottomVector from '@/scripts/components/svg/LoginBottomVector.vue'
 import LoginBackgroundOverlay from '@/scripts/components/svg/LoginBackgroundOverlay.vue'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
 const pageHeading = computed(() => {
   if (window.login_page_heading) {
     return window.login_page_heading
   }
 
-  return 'Simple Invoicing for Individuals Small Businesses'
+  return 'Vos devis et factures, simplement.'
 })
 
 const pageDescription = computed(() => {
@@ -149,14 +149,15 @@ const pageDescription = computed(() => {
     return window.login_page_description
   }
 
-  return 'Crater helps you track expenses, record payments & generate beautiful invoices & estimates.'
+  return 'AutoFacture accompagne les indépendants et les petites entreprises de la création du devis jusqu’au règlement.'
 })
 
 const copyrightText = computed(() => {
   if (window.copyright_text) {
     return window.copyright_text
   }
-  return 'Copyright @ Crater Invoice, Inc.'
+
+  return '© AutoFacture '
 })
 
 const loginPageLogo = computed(() => {
@@ -167,6 +168,3 @@ const loginPageLogo = computed(() => {
   return false
 })
 </script>
-
-<style lang="scss" scoped>
-</style>

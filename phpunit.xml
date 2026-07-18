@@ -2,7 +2,8 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
-         colors="true">
+         colors="true"
+         cacheDirectory=".phpunit.cache">
     <testsuites>
         <testsuite name="Unit">
             <directory suffix="Test.php">./tests/Unit</directory>
@@ -11,20 +12,32 @@
             <directory suffix="Test.php">./tests/Feature</directory>
         </testsuite>
     </testsuites>
-    <filter>
-        <whitelist processUncoveredFilesFromWhitelist="true">
+    <source>
+        <include>
             <directory suffix=".php">./app</directory>
-        </whitelist>
-    </filter>
+        </include>
+    </source>
     <php>
         <server name="APP_ENV" value="testing"/>
+        <server name="APP_DEBUG" value="true"/>
+        <server name="APP_FAKER_LOCALE" value="en_US"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
-        <server name="CACHE_DRIVER" value="array"/>
-        <server name="DB_CONNECTION" value="sqlite"/>
-        <server name="DB_DATABASE" value=":memory:"/>
+        <server name="CACHE_STORE" value="array"/>
         <server name="MAIL_MAILER" value="array"/>
         <server name="QUEUE_CONNECTION" value="sync"/>
         <server name="SESSION_DRIVER" value="array"/>
-        <server name="APP_URL" value="http://crater.test"/>
+        <server name="APP_URL" value="http://autofacture.test"/>
+
+        <server name="FEATURE_RECURRING_INVOICES" value="true"/>
+        <server name="FEATURE_EXPENSES" value="true"/>
+        <server name="FEATURE_REPORTS" value="true"/>
+        <server name="FEATURE_MODULES" value="true"/>
+        <server name="FEATURE_ADVANCED_ROLES" value="true"/>
+        <server name="FEATURE_EXCHANGE_RATES" value="true"/>
+        <server name="FEATURE_CUSTOM_FIELDS" value="true"/>
+        <server name="FEATURE_IN_APP_UPDATE" value="true"/>
+        <server name="FEATURE_MAIL_CONFIGURATION" value="true"/>
+        <server name="FEATURE_FILE_DISK" value="true"/>
+        <server name="FEATURE_BACKUP" value="true"/>
     </php>
 </phpunit>

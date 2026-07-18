@@ -3,7 +3,7 @@
 use Crater\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
-use function Pest\Laravel\{getJson};
+use function Pest\Laravel\getJson;
 
 beforeEach(function () {
     Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
@@ -14,34 +14,19 @@ beforeEach(function () {
         'company' => $user->companies()->first()->id,
     ]);
 
-    Sanctum::actingAs(
-        $user,
-        ['*']
-    );
+    Sanctum::actingAs($user, ['*']);
 });
 
 test('next number', function () {
-    $key = 'invoice';
+    getJson('api/v1/next-number?key=invoice')
+        ->assertStatus(200)
+        ->assertJson(['nextNumber' => 'FAC-000001']);
 
-    $response = getJson('api/v1/next-number?key='.$key);
+    getJson('api/v1/next-number?key=estimate')
+        ->assertStatus(200)
+        ->assertJson(['nextNumber' => 'DEV-000001']);
 
-    $response->assertStatus(200)->assertJson([
-        'nextNumber' => 'INV-000001',
-    ]);
-
-    $key = 'estimate';
-
-    $response = getJson('api/v1/next-number?key='.$key);
-
-    $response->assertStatus(200)->assertJson([
-        'nextNumber' => 'EST-000001',
-    ]);
-
-    $key = 'payment';
-
-    $response = getJson('api/v1/next-number?key='.$key);
-
-    $response->assertStatus(200)->assertJson([
-        'nextNumber' => 'PAY-000001',
-    ]);
+    getJson('api/v1/next-number?key=payment')
+        ->assertStatus(200)
+        ->assertJson(['nextNumber' => 'REG-000001']);
 });

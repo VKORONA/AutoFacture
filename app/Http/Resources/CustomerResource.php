@@ -6,21 +6,21 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class CustomerResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array
-     */
     public function toArray($request)
     {
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'customer_type' => $this->customer_type,
             'email' => $this->email,
+            'electronic_invoicing_email' => $this->electronic_invoicing_email,
             'phone' => $this->phone,
             'contact_name' => $this->contact_name,
             'company_name' => $this->company_name,
+            'siren' => $this->siren,
+            'siret' => $this->siret,
+            'vat_number' => $this->vat_number,
+            'ape_code' => $this->ape_code,
             'website' => $this->website,
             'enable_portal' => $this->enable_portal,
             'password_added' => $this->password ? true : false,
@@ -45,7 +45,7 @@ class CustomerResource extends JsonResource
             'fields' => $this->when($this->fields()->exists(), function () {
                 return CustomFieldValueResource::collection($this->fields);
             }),
-            'company' => $this->when($this->company()->exists(), function () {
+            'company' => $this->whenLoaded('company', function () {
                 return new CompanyResource($this->company);
             }),
             'currency' => $this->when($this->currency()->exists(), function () {

@@ -4,753 +4,333 @@
       <BasePageHeader :title="pageTitle">
         <BaseBreadcrumb>
           <BaseBreadcrumbItem :title="$t('general.home')" to="dashboard" />
-
-          <BaseBreadcrumbItem
-            :title="$tc('customers.customer', 2)"
-            to="/admin/customers"
-          />
-
-          <BaseBreadcrumb-item :title="pageTitle" to="#" active />
+          <BaseBreadcrumbItem :title="$tc('customers.customer', 2)" to="/admin/customers" />
+          <BaseBreadcrumbItem :title="pageTitle" to="#" active />
         </BaseBreadcrumb>
 
         <template #actions>
-          <div class="flex items-center justify-end">
-            <BaseButton type="submit" :loading="isSaving" :disabled="isSaving">
-              <template #left="slotProps">
-                <BaseIcon name="SaveIcon" :class="slotProps.class" />
-              </template>
-              {{
-                isEdit
-                  ? $t('customers.update_customer')
-                  : $t('customers.save_customer')
-              }}
-            </BaseButton>
-          </div>
+          <BaseButton type="submit" :loading="isSaving" :disabled="isSaving">
+            <template #left="slotProps">
+              <BaseIcon name="SaveIcon" :class="slotProps.class" />
+            </template>
+            {{ isEdit ? $t('customers.update_customer') : $t('customers.save_customer') }}
+          </BaseButton>
         </template>
       </BasePageHeader>
 
       <BaseCard class="mt-5">
-        <!-- Basic Info -->
-        <div class="grid grid-cols-5 gap-4 mb-8">
-          <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-            {{ $t('customers.basic_info') }}
-          </h6>
+        <section class="grid grid-cols-5 gap-4 mb-8">
+          <div class="col-span-5 lg:col-span-1">
+            <h6 class="text-lg font-semibold">Identité du client</h6>
+            <p class="mt-1 text-sm text-gray-500">
+              Les identifiants légaux sont utilisés sur les devis, factures et futurs fichiers Factur-X.
+            </p>
+          </div>
 
           <BaseInputGrid class="col-span-5 lg:col-span-4">
+            <BaseInputGroup label="Type de client" required>
+              <BaseMultiselect
+                v-model="customerStore.currentCustomer.customer_type"
+                value-prop="value"
+                label="label"
+                :options="customerTypes"
+                :can-deselect="false"
+                :can-clear="false"
+              />
+            </BaseInputGroup>
+
             <BaseInputGroup
-              :label="$t('customers.display_name')"
+              :label="customerStore.currentCustomer.customer_type === 'business' ? 'Nom commercial ou raison sociale' : 'Nom et prénom'"
               required
-              :error="
-                v$.currentCustomer.name.$error &&
-                v$.currentCustomer.name.$errors[0].$message
-              "
-              :content-loading="isFetchingInitialData"
+              :error="fieldError('name')"
             >
               <BaseInput
-                v-model="customerStore.currentCustomer.name"
-                :content-loading="isFetchingInitialData"
-                type="text"
-                name="name"
-                class=""
+                v-model.trim="customerStore.currentCustomer.name"
                 :invalid="v$.currentCustomer.name.$error"
                 @input="v$.currentCustomer.name.$touch()"
               />
             </BaseInputGroup>
 
             <BaseInputGroup
-              :label="$t('customers.primary_contact_name')"
-              :content-loading="isFetchingInitialData"
+              v-if="customerStore.currentCustomer.customer_type === 'business'"
+              label="Raison sociale complète"
             >
+              <BaseInput v-model.trim="customerStore.currentCustomer.company_name" />
+            </BaseInputGroup>
+
+            <BaseInputGroup label="Contact principal">
+              <BaseInput v-model.trim="customerStore.currentCustomer.contact_name" />
+            </BaseInputGroup>
+
+            <BaseInputGroup label="SIREN" :error="fieldError('siren')">
               <BaseInput
-                v-model.trim="customerStore.currentCustomer.contact_name"
-                :content-loading="isFetchingInitialData"
-                type="text"
+                v-model.trim="customerStore.currentCustomer.siren"
+                maxlength="9"
+                inputmode="numeric"
+                placeholder="9 chiffres"
+                :invalid="v$.currentCustomer.siren.$error"
+                @input="v$.currentCustomer.siren.$touch()"
               />
             </BaseInputGroup>
 
-            <BaseInputGroup
-              :error="
-                v$.currentCustomer.email.$error &&
-                v$.currentCustomer.email.$errors[0].$message
-              "
-              :content-loading="isFetchingInitialData"
-              :label="$t('customers.email')"
-            >
+            <BaseInputGroup label="SIRET" :error="fieldError('siret')">
+              <BaseInput
+                v-model.trim="customerStore.currentCustomer.siret"
+                maxlength="14"
+                inputmode="numeric"
+                placeholder="14 chiffres"
+                :invalid="v$.currentCustomer.siret.$error"
+                @input="v$.currentCustomer.siret.$touch()"
+              />
+            </BaseInputGroup>
+
+            <BaseInputGroup label="TVA intracommunautaire">
+              <BaseInput
+                v-model.trim="customerStore.currentCustomer.vat_number"
+                placeholder="FR00123456789"
+              />
+            </BaseInputGroup>
+
+            <BaseInputGroup label="Code APE / NAF">
+              <BaseInput v-model.trim="customerStore.currentCustomer.ape_code" placeholder="4322B" />
+            </BaseInputGroup>
+
+            <BaseInputGroup :label="$t('customers.email')" :error="fieldError('email')">
               <BaseInput
                 v-model.trim="customerStore.currentCustomer.email"
-                :content-loading="isFetchingInitialData"
-                type="text"
-                name="email"
+                type="email"
                 :invalid="v$.currentCustomer.email.$error"
                 @input="v$.currentCustomer.email.$touch()"
               />
             </BaseInputGroup>
 
-            <BaseInputGroup
-              :label="$t('customers.phone')"
-              :content-loading="isFetchingInitialData"
-            >
+            <BaseInputGroup label="E-mail de facturation électronique" :error="fieldError('electronic_invoicing_email')">
               <BaseInput
-                v-model.trim="customerStore.currentCustomer.phone"
-                :content-loading="isFetchingInitialData"
-                type="text"
-                name="phone"
+                v-model.trim="customerStore.currentCustomer.electronic_invoicing_email"
+                type="email"
+                :invalid="v$.currentCustomer.electronic_invoicing_email.$error"
+                @input="v$.currentCustomer.electronic_invoicing_email.$touch()"
               />
             </BaseInputGroup>
 
-            <BaseInputGroup
-              :label="$t('customers.primary_currency')"
-              :content-loading="isFetchingInitialData"
-              :error="
-                v$.currentCustomer.currency_id.$error &&
-                v$.currentCustomer.currency_id.$errors[0].$message
-              "
-              required
-            >
+            <BaseInputGroup :label="$t('customers.phone')">
+              <BaseInput v-model.trim="customerStore.currentCustomer.phone" />
+            </BaseInputGroup>
+
+            <BaseInputGroup :label="$t('customers.website')" :error="fieldError('website')">
+              <BaseInput
+                v-model.trim="customerStore.currentCustomer.website"
+                type="url"
+                :invalid="v$.currentCustomer.website.$error"
+                @input="v$.currentCustomer.website.$touch()"
+              />
+            </BaseInputGroup>
+
+            <BaseInputGroup :label="$t('customers.primary_currency')" required :error="fieldError('currency_id')">
               <BaseMultiselect
                 v-model="customerStore.currentCustomer.currency_id"
                 value-prop="id"
                 label="name"
                 track-by="name"
-                :content-loading="isFetchingInitialData"
                 :options="globalStore.currencies"
                 searchable
                 :can-deselect="false"
-                :placeholder="$t('customers.select_currency')"
+                :can-clear="false"
                 :invalid="v$.currentCustomer.currency_id.$error"
-                class="w-full"
-              >
-              </BaseMultiselect>
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              :error="
-                v$.currentCustomer.website.$error &&
-                v$.currentCustomer.website.$errors[0].$message
-              "
-              :label="$t('customers.website')"
-              :content-loading="isFetchingInitialData"
-            >
-              <BaseInput
-                v-model="customerStore.currentCustomer.website"
-                :content-loading="isFetchingInitialData"
-                type="url"
-                @input="v$.currentCustomer.website.$touch()"
-              />
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              :label="$t('customers.prefix')"
-              :error="
-                v$.currentCustomer.prefix.$error &&
-                v$.currentCustomer.prefix.$errors[0].$message
-              "
-              :content-loading="isFetchingInitialData"
-            >
-              <BaseInput
-                v-model="customerStore.currentCustomer.prefix"
-                :content-loading="isFetchingInitialData"
-                type="text"
-                name="name"
-                class=""
-                :invalid="v$.currentCustomer.prefix.$error"
-                @input="v$.currentCustomer.prefix.$touch()"
               />
             </BaseInputGroup>
           </BaseInputGrid>
-        </div>
+        </section>
 
-        <BaseDivider class="mb-5 md:mb-8" />
+        <BaseDivider class="mb-8" />
 
-        <!-- Portal Access-->
-
-        <div class="grid grid-cols-5 gap-4 mb-8">
-          <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-            {{ $t('customers.portal_access') }}
-          </h6>
+        <section class="grid grid-cols-5 gap-4 mb-8">
+          <div class="col-span-5 lg:col-span-1">
+            <h6 class="text-lg font-semibold">Adresse de facturation</h6>
+          </div>
 
           <BaseInputGrid class="col-span-5 lg:col-span-4">
-            <div class="md:col-span-2">
-              <p class="text-sm text-gray-500">
-                {{ $t('customers.portal_access_text') }}
-              </p>
-
-              <BaseSwitch
-                v-model="customerStore.currentCustomer.enable_portal"
-                class="mt-1 flex"
-              />
-            </div>
-
-            <BaseInputGroup
-              v-if="customerStore.currentCustomer.enable_portal"
-              :content-loading="isFetchingInitialData"
-              :label="$t('customers.portal_access_url')"
-              class="md:col-span-2"
-              :help-text="$t('customers.portal_access_url_help')"
-            >
-              <CopyInputField :token="getCustomerPortalUrl" />
+            <BaseInputGroup label="Nom affiché">
+              <BaseInput v-model.trim="customerStore.currentCustomer.billing.name" />
             </BaseInputGroup>
 
-            <BaseInputGroup
-              v-if="customerStore.currentCustomer.enable_portal"
-              :content-loading="isFetchingInitialData"
-              :error="
-                v$.currentCustomer.password.$error &&
-                v$.currentCustomer.password.$errors[0].$message
-              "
-              :label="$t('customers.password')"
-            >
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.password"
-                :content-loading="isFetchingInitialData"
-                :type="isShowPassword ? 'text' : 'password'"
-                name="password"
-                :invalid="v$.currentCustomer.password.$error"
-                @input="v$.currentCustomer.password.$touch()"
-              >
-                <template #right>
-                  <BaseIcon
-                    v-if="isShowPassword"
-                    name="EyeOffIcon"
-                    class="w-5 h-5 mr-1 text-gray-500 cursor-pointer"
-                    @click="isShowPassword = !isShowPassword"
-                  />
-                  <BaseIcon
-                    v-else
-                    name="EyeIcon"
-                    class="w-5 h-5 mr-1 text-gray-500 cursor-pointer"
-                    @click="isShowPassword = !isShowPassword"
-                  /> </template
-              ></BaseInput>
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              v-if="customerStore.currentCustomer.enable_portal"
-              :error="
-                v$.currentCustomer.confirm_password.$error &&
-                v$.currentCustomer.confirm_password.$errors[0].$message
-              "
-              :content-loading="isFetchingInitialData"
-              label="Confirm Password"
-            >
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.confirm_password"
-                :content-loading="isFetchingInitialData"
-                :type="isShowConfirmPassword ? 'text' : 'password'"
-                name="confirm_password"
-                :invalid="v$.currentCustomer.confirm_password.$error"
-                @input="v$.currentCustomer.confirm_password.$touch()"
-              >
-                <template #right>
-                  <BaseIcon
-                    v-if="isShowConfirmPassword"
-                    name="EyeOffIcon"
-                    class="w-5 h-5 mr-1 text-gray-500 cursor-pointer"
-                    @click="isShowConfirmPassword = !isShowConfirmPassword"
-                  />
-                  <BaseIcon
-                    v-else
-                    name="EyeIcon"
-                    class="w-5 h-5 mr-1 text-gray-500 cursor-pointer"
-                    @click="isShowConfirmPassword = !isShowConfirmPassword"
-                  /> </template
-              ></BaseInput>
-            </BaseInputGroup>
-          </BaseInputGrid>
-        </div>
-
-        <BaseDivider class="mb-5 md:mb-8" />
-
-        <!-- Billing Address   -->
-        <div class="grid grid-cols-5 gap-4 mb-8">
-          <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-            {{ $t('customers.billing_address') }}
-          </h6>
-
-          <BaseInputGrid
-            v-if="customerStore.currentCustomer.billing"
-            class="col-span-5 lg:col-span-4"
-          >
-            <BaseInputGroup
-              :label="$t('customers.name')"
-              :content-loading="isFetchingInitialData"
-            >
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.billing.name"
-                :content-loading="isFetchingInitialData"
-                type="text"
-                class="w-full"
-                name="address_name"
-              />
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              :label="$t('customers.country')"
-              :content-loading="isFetchingInitialData"
-            >
+            <BaseInputGroup :label="$t('customers.country')">
               <BaseMultiselect
                 v-model="customerStore.currentCustomer.billing.country_id"
                 value-prop="id"
                 label="name"
                 track-by="name"
-                resolve-on-load
                 searchable
-                :content-loading="isFetchingInitialData"
                 :options="globalStore.countries"
-                :placeholder="$t('general.select_country')"
-                class="w-full"
               />
             </BaseInputGroup>
 
-            <BaseInputGroup
-              :label="$t('customers.state')"
-              :content-loading="isFetchingInitialData"
-            >
-              <BaseInput
-                v-model="customerStore.currentCustomer.billing.state"
-                :content-loading="isFetchingInitialData"
-                name="billing.state"
-                type="text"
-              />
+            <BaseInputGroup label="Adresse">
+              <BaseInput v-model.trim="customerStore.currentCustomer.billing.address_street_1" />
             </BaseInputGroup>
 
-            <BaseInputGroup
-              :content-loading="isFetchingInitialData"
-              :label="$t('customers.city')"
-            >
-              <BaseInput
-                v-model="customerStore.currentCustomer.billing.city"
-                :content-loading="isFetchingInitialData"
-                name="billing.city"
-                type="text"
-              />
+            <BaseInputGroup label="Complément d'adresse">
+              <BaseInput v-model.trim="customerStore.currentCustomer.billing.address_street_2" />
             </BaseInputGroup>
 
-            <BaseInputGroup
-              :label="$t('customers.address')"
-              :error="
-                (v$.currentCustomer.billing.address_street_1.$error &&
-                  v$.currentCustomer.billing.address_street_1.$errors[0]
-                    .$message) ||
-                (v$.currentCustomer.billing.address_street_2.$error &&
-                  v$.currentCustomer.billing.address_street_2.$errors[0]
-                    .$message)
-              "
-              :content-loading="isFetchingInitialData"
-            >
-              <BaseTextarea
-                v-model.trim="
-                  customerStore.currentCustomer.billing.address_street_1
-                "
-                :content-loading="isFetchingInitialData"
-                :placeholder="$t('general.street_1')"
-                type="text"
-                name="billing_street1"
-                :container-class="`mt-3`"
-                @input="v$.currentCustomer.billing.address_street_1.$touch()"
-              />
-
-              <BaseTextarea
-                v-model.trim="
-                  customerStore.currentCustomer.billing.address_street_2
-                "
-                :content-loading="isFetchingInitialData"
-                :placeholder="$t('general.street_2')"
-                type="text"
-                class="mt-3"
-                name="billing_street2"
-                :container-class="`mt-3`"
-                @input="v$.currentCustomer.billing.address_street_2.$touch()"
-              />
+            <BaseInputGroup :label="$t('customers.zip_code')">
+              <BaseInput v-model.trim="customerStore.currentCustomer.billing.zip" />
             </BaseInputGroup>
 
-            <div class="space-y-6">
-              <BaseInputGroup
-                :content-loading="isFetchingInitialData"
-                :label="$t('customers.phone')"
-                class="text-left"
-              >
-                <BaseInput
-                  v-model.trim="customerStore.currentCustomer.billing.phone"
-                  :content-loading="isFetchingInitialData"
-                  type="text"
-                  name="phone"
-                />
-              </BaseInputGroup>
-
-              <BaseInputGroup
-                :label="$t('customers.zip_code')"
-                :content-loading="isFetchingInitialData"
-                class="mt-2 text-left"
-              >
-                <BaseInput
-                  v-model.trim="customerStore.currentCustomer.billing.zip"
-                  :content-loading="isFetchingInitialData"
-                  type="text"
-                  name="zip"
-                />
-              </BaseInputGroup>
-            </div>
+            <BaseInputGroup :label="$t('customers.city')">
+              <BaseInput v-model.trim="customerStore.currentCustomer.billing.city" />
+            </BaseInputGroup>
           </BaseInputGrid>
-        </div>
+        </section>
 
-        <BaseDivider class="mb-5 md:mb-8" />
+        <BaseDivider class="mb-8" />
 
-        <!-- Billing Address Copy Button  -->
-        <div
-          class="flex items-center justify-start mb-6 md:justify-end md:mb-0"
-        >
-          <div class="p-1">
-            <BaseButton
-              type="button"
-              :content-loading="isFetchingInitialData"
-              size="sm"
-              variant="primary-outline"
-              @click="customerStore.copyAddress(true)"
-            >
-              <template #left="slotProps">
-                <BaseIcon
-                  name="DocumentDuplicateIcon"
-                  :class="slotProps.class"
-                />
-              </template>
-              {{ $t('customers.copy_billing_address') }}
-            </BaseButton>
+        <section class="grid grid-cols-5 gap-4 mb-8">
+          <div class="col-span-5 lg:col-span-1">
+            <h6 class="text-lg font-semibold">Portail client</h6>
+            <p class="mt-1 text-sm text-gray-500">Optionnel pour le MVP.</p>
           </div>
-        </div>
-
-        <!-- Shipping Address  -->
-        <div
-          v-if="customerStore.currentCustomer.shipping"
-          class="grid grid-cols-5 gap-4 mb-8"
-        >
-          <h6 class="col-span-5 text-lg font-semibold text-left lg:col-span-1">
-            {{ $t('customers.shipping_address') }}
-          </h6>
 
           <BaseInputGrid class="col-span-5 lg:col-span-4">
-            <BaseInputGroup
-              :content-loading="isFetchingInitialData"
-              :label="$t('customers.name')"
-            >
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.shipping.name"
-                :content-loading="isFetchingInitialData"
-                type="text"
-                name="address_name"
-              />
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              :label="$t('customers.country')"
-              :content-loading="isFetchingInitialData"
-            >
-              <BaseMultiselect
-                v-model="customerStore.currentCustomer.shipping.country_id"
-                value-prop="id"
-                label="name"
-                track-by="name"
-                resolve-on-load
-                searchable
-                :content-loading="isFetchingInitialData"
-                :options="globalStore.countries"
-                :placeholder="$t('general.select_country')"
-                class="w-full"
-              />
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              :label="$t('customers.state')"
-              :content-loading="isFetchingInitialData"
-            >
-              <BaseInput
-                v-model="customerStore.currentCustomer.shipping.state"
-                :content-loading="isFetchingInitialData"
-                name="shipping.state"
-                type="text"
-              />
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              :content-loading="isFetchingInitialData"
-              :label="$t('customers.city')"
-            >
-              <BaseInput
-                v-model="customerStore.currentCustomer.shipping.city"
-                :content-loading="isFetchingInitialData"
-                name="shipping.city"
-                type="text"
-              />
-            </BaseInputGroup>
-
-            <BaseInputGroup
-              :label="$t('customers.address')"
-              :content-loading="isFetchingInitialData"
-              :error="
-                (v$.currentCustomer.shipping.address_street_1.$error &&
-                  v$.currentCustomer.shipping.address_street_1.$errors[0]
-                    .$message) ||
-                (v$.currentCustomer.shipping.address_street_2.$error &&
-                  v$.currentCustomer.shipping.address_street_2.$errors[0]
-                    .$message)
-              "
-            >
-              <BaseTextarea
-                v-model.trim="
-                  customerStore.currentCustomer.shipping.address_street_1
-                "
-                :content-loading="isFetchingInitialData"
-                type="text"
-                :placeholder="$t('general.street_1')"
-                name="shipping_street1"
-                @input="v$.currentCustomer.shipping.address_street_1.$touch()"
-              />
-
-              <BaseTextarea
-                v-model.trim="
-                  customerStore.currentCustomer.shipping.address_street_2
-                "
-                :content-loading="isFetchingInitialData"
-                type="text"
-                :placeholder="$t('general.street_2')"
-                name="shipping_street2"
-                class="mt-3"
-                :container-class="`mt-3`"
-                @input="v$.currentCustomer.shipping.address_street_2.$touch()"
-              />
-            </BaseInputGroup>
-
-            <div class="space-y-6">
-              <BaseInputGroup
-                :content-loading="isFetchingInitialData"
-                :label="$t('customers.phone')"
-                class="text-left"
-              >
-                <BaseInput
-                  v-model.trim="customerStore.currentCustomer.shipping.phone"
-                  :content-loading="isFetchingInitialData"
-                  type="text"
-                  name="phone"
-                />
-              </BaseInputGroup>
-
-              <BaseInputGroup
-                :label="$t('customers.zip_code')"
-                :content-loading="isFetchingInitialData"
-                class="mt-2 text-left"
-              >
-                <BaseInput
-                  v-model.trim="customerStore.currentCustomer.shipping.zip"
-                  :content-loading="isFetchingInitialData"
-                  type="text"
-                  name="zip"
-                />
-              </BaseInputGroup>
+            <div class="md:col-span-2">
+              <BaseSwitch v-model="customerStore.currentCustomer.enable_portal" />
             </div>
+
+            <BaseInputGroup
+              v-if="customerStore.currentCustomer.enable_portal"
+              :label="$t('customers.password')"
+              :error="fieldError('password')"
+            >
+              <BaseInput
+                v-model.trim="customerStore.currentCustomer.password"
+                :type="showPassword ? 'text' : 'password'"
+                :invalid="v$.currentCustomer.password.$error"
+                @input="v$.currentCustomer.password.$touch()"
+              />
+            </BaseInputGroup>
+
+            <BaseInputGroup
+              v-if="customerStore.currentCustomer.enable_portal"
+              label="Confirmer le mot de passe"
+              :error="fieldError('confirm_password')"
+            >
+              <BaseInput
+                v-model.trim="customerStore.currentCustomer.confirm_password"
+                :type="showPassword ? 'text' : 'password'"
+                :invalid="v$.currentCustomer.confirm_password.$error"
+                @input="v$.currentCustomer.confirm_password.$touch()"
+              />
+            </BaseInputGroup>
           </BaseInputGrid>
-        </div>
-
-        <BaseDivider
-          v-if="customFieldStore.customFields.length > 0"
-          class="mb-5 md:mb-8"
-        />
-
-        <!-- Customer Custom Fields -->
-        <div class="grid grid-cols-5 gap-2 mb-8">
-          <h6
-            v-if="customFieldStore.customFields.length > 0"
-            class="col-span-5 text-lg font-semibold text-left lg:col-span-1"
-          >
-            {{ $t('settings.custom_fields.title') }}
-          </h6>
-
-          <div class="col-span-5 lg:col-span-4">
-            <CustomerCustomFields
-              type="Customer"
-              :store="customerStore"
-              store-prop="currentCustomer"
-              :is-edit="isEdit"
-              :is-loading="isLoadingContent"
-              :custom-field-scope="customFieldValidationScope"
-            />
-          </div>
-        </div>
+        </section>
       </BaseCard>
     </form>
   </BasePage>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import {
-  required,
-  minLength,
-  url,
-  maxLength,
-  helpers,
-  email,
-  sameAs,
-  requiredIf,
-} from '@vuelidate/validators'
 import useVuelidate from '@vuelidate/core'
+import {
+  email,
+  helpers,
+  minLength,
+  required,
+  requiredIf,
+  sameAs,
+  url,
+} from '@vuelidate/validators'
 import { useCustomerStore } from '@/scripts/admin/stores/customer'
-import { useCustomFieldStore } from '@/scripts/admin/stores/custom-field'
-import CustomerCustomFields from '@/scripts/admin/components/custom-fields/CreateCustomFields.vue'
 import { useGlobalStore } from '@/scripts/admin/stores/global'
-import CopyInputField from '@/scripts/admin/components/CopyInputField.vue'
-import { useCompanyStore } from '@/scripts/admin/stores/company'
 
 const customerStore = useCustomerStore()
-const customFieldStore = useCustomFieldStore()
 const globalStore = useGlobalStore()
-const companyStore = useCompanyStore()
-
-const customFieldValidationScope = 'customFields'
-
+const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 
-const router = useRouter()
-const route = useRoute()
-
-let isFetchingInitialData = ref(false)
-let isShowPassword = ref(false)
-let isShowConfirmPassword = ref(false)
-
-let active = ref(false)
 const isSaving = ref(false)
-
+const showPassword = ref(false)
 const isEdit = computed(() => route.name === 'customers.edit')
+const pageTitle = computed(() => isEdit.value ? t('customers.edit_customer') : t('customers.new_customer'))
 
-let isLoadingContent = computed(() => customerStore.isFetchingInitialSettings)
+const customerTypes = [
+  { value: 'business', label: 'Professionnel' },
+  { value: 'individual', label: 'Particulier' },
+]
 
-const pageTitle = computed(() =>
-  isEdit.value ? t('customers.edit_customer') : t('customers.new_customer')
+const optionalExactDigits = (length, message) => helpers.withMessage(
+  message,
+  (value) => !value || new RegExp(`^\\d{${length}}$`).test(String(value).replace(/\\D/g, ''))
 )
 
-const rules = computed(() => {
-  return {
-    currentCustomer: {
-      name: {
-        required: helpers.withMessage(t('validation.required'), required),
-        minLength: helpers.withMessage(
-          t('validation.name_min_length', { count: 3 }),
-          minLength(3)
-        ),
-      },
-      prefix: {
-        minLength: helpers.withMessage(
-          t('validation.name_min_length', { count: 3 }),
-          minLength(3)
-        ),
-      },
-      currency_id: {
-        required: helpers.withMessage(t('validation.required'), required),
-      },
-
-      email: {
-        required: helpers.withMessage(
-          t('validation.required'),
-          requiredIf(customerStore.currentCustomer.enable_portal == true)
-        ),
-        email: helpers.withMessage(t('validation.email_incorrect'), email),
-      },
-      password: {
-        required: helpers.withMessage(
-          t('validation.required'),
-          requiredIf(
-            customerStore.currentCustomer.enable_portal == true &&
-              !customerStore.currentCustomer.password_added
-          )
-        ),
-        minLength: helpers.withMessage(
-          t('validation.password_min_length', { count: 8 }),
-          minLength(8)
-        ),
-      },
-      confirm_password: {
-        sameAsPassword: helpers.withMessage(
-          t('validation.password_incorrect'),
-          sameAs(customerStore.currentCustomer.password)
-        ),
-      },
-
-      website: {
-        url: helpers.withMessage(t('validation.invalid_url'), url),
-      },
-      billing: {
-        address_street_1: {
-          maxLength: helpers.withMessage(
-            t('validation.address_maxlength', { count: 255 }),
-            maxLength(255)
-          ),
-        },
-
-        address_street_2: {
-          maxLength: helpers.withMessage(
-            t('validation.address_maxlength', { count: 255 }),
-            maxLength(255)
-          ),
-        },
-      },
-
-      shipping: {
-        address_street_1: {
-          maxLength: helpers.withMessage(
-            t('validation.address_maxlength', { count: 255 }),
-            maxLength(255)
-          ),
-        },
-
-        address_street_2: {
-          maxLength: helpers.withMessage(
-            t('validation.address_maxlength', { count: 255 }),
-            maxLength(255)
-          ),
-        },
-      },
+const rules = computed(() => ({
+  currentCustomer: {
+    name: {
+      required: helpers.withMessage(t('validation.required'), required),
+      minLength: helpers.withMessage(t('validation.name_min_length', { count: 3 }), minLength(3)),
     },
-  }
-})
+    siren: {
+      format: optionalExactDigits(9, 'Le SIREN doit contenir exactement 9 chiffres.'),
+    },
+    siret: {
+      format: optionalExactDigits(14, 'Le SIRET doit contenir exactement 14 chiffres.'),
+    },
+    email: {
+      required: helpers.withMessage(
+        t('validation.required'),
+        requiredIf(() => customerStore.currentCustomer.enable_portal)
+      ),
+      email: helpers.withMessage(t('validation.email_incorrect'), email),
+    },
+    electronic_invoicing_email: {
+      email: helpers.withMessage(t('validation.email_incorrect'), email),
+    },
+    website: {
+      url: helpers.withMessage(t('validation.invalid_url'), url),
+    },
+    currency_id: {
+      required: helpers.withMessage(t('validation.required'), required),
+    },
+    password: {
+      required: helpers.withMessage(
+        t('validation.required'),
+        requiredIf(() => customerStore.currentCustomer.enable_portal && !customerStore.currentCustomer.password_added)
+      ),
+      minLength: helpers.withMessage(t('validation.password_min_length', { count: 8 }), minLength(8)),
+    },
+    confirm_password: {
+      sameAsPassword: helpers.withMessage(
+        t('validation.password_incorrect'),
+        sameAs(computed(() => customerStore.currentCustomer.password))
+      ),
+    },
+  },
+}))
 
-const getCustomerPortalUrl = computed(() => {
-  return `${window.location.origin}/${companyStore.selectedCompany.slug}/customer/login`
-})
-
-const v$ = useVuelidate(rules, customerStore, {
-  $scope: customFieldValidationScope,
-})
+const v$ = useVuelidate(rules, customerStore)
 
 customerStore.resetCurrentCustomer()
-
 customerStore.fetchCustomerInitialSettings(isEdit.value)
+
+function fieldError(field) {
+  const validation = v$.value.currentCustomer[field]
+  return validation && validation.$error ? validation.$errors[0].$message : ''
+}
 
 async function submitCustomerData() {
   v$.value.$touch()
-
-  if (v$.value.$invalid) {
-    return true
-  }
+  if (v$.value.$invalid) return
 
   isSaving.value = true
-
-  let data = {
-    ...customerStore.currentCustomer,
-  }
-
-  let response = null
-
   try {
-    const action = isEdit.value
-      ? customerStore.updateCustomer
-      : customerStore.addCustomer
-    response = await action(data)
-  } catch (err) {
+    const action = isEdit.value ? customerStore.updateCustomer : customerStore.addCustomer
+    const response = await action({ ...customerStore.currentCustomer })
+    router.push(`/admin/customers/${response.data.data.id}/view`)
+  } finally {
     isSaving.value = false
-    return
   }
-
-  router.push(`/admin/customers/${response.data.data.id}/view`)
 }
 </script>

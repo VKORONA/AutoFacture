@@ -14,37 +14,30 @@ use Illuminate\Http\Request;
 
 class CustomerStatsController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function __invoke(Request $request, Customer $customer)
     {
         $this->authorize('view', $customer);
 
-        $i = 0;
-        $months = [];
         $invoiceTotals = [];
         $expenseTotals = [];
         $receiptTotals = [];
         $netProfits = [];
-        $monthCounter = 0;
-        $fiscalYear = CompanySetting::getSetting('fiscal_year', $request->header('company'));
+        $months = [];
+
+        $fiscalYear = CompanySetting::getSetting('fiscal_year', $request->header('company')) ?: '1-12';
+        $fiscalStartMonth = (int) explode('-', $fiscalYear)[0];
         $startDate = Carbon::now();
         $start = Carbon::now();
         $end = Carbon::now();
-        $terms = explode('-', $fiscalYear);
 
-        if ($terms[0] <= $start->month) {
-            $startDate->month($terms[0])->startOfMonth();
-            $start->month($terms[0])->startOfMonth();
-            $end->month($terms[0])->endOfMonth();
+        if ($fiscalStartMonth <= $start->month) {
+            $startDate->month($fiscalStartMonth)->startOfMonth();
+            $start->month($fiscalStartMonth)->startOfMonth();
+            $end->month($fiscalStartMonth)->endOfMonth();
         } else {
-            $startDate->subYear()->month($terms[0])->startOfMonth();
-            $start->subYear()->month($terms[0])->startOfMonth();
-            $end->subYear()->month($terms[0])->endOfMonth();
+            $startDate->subYear()->month($fiscalStartMonth)->startOfMonth();
+            $start->subYear()->month($fiscalStartMonth)->startOfMonth();
+            $end->subYear()->month($fiscalStartMonth)->endOfMonth();
         }
 
         if ($request->has('previous_year')) {
@@ -52,91 +45,59 @@ class CustomerStatsController extends Controller
             $start->subYear()->startOfMonth();
             $end->subYear()->endOfMonth();
         }
-        while ($monthCounter < 12) {
-            array_push(
-                $invoiceTotals,
-                Invoice::whereBetween(
-                    'invoice_date',
-                    [$start->format('Y-m-d'), $end->format('Y-m-d')]
-                )
-                    ->whereCompany()
-                    ->whereCustomer($customer->id)
-                    ->sum('total') ?? 0
-            );
-            array_push(
-                $expenseTotals,
-                Expense::whereBetween(
-                    'expense_date',
-                    [$start->format('Y-m-d'), $end->format('Y-m-d')]
-                )
-                    ->whereCompany()
-                    ->whereUser($customer->id)
-                    ->sum('amount') ?? 0
-            );
-            array_push(
-                $receiptTotals,
-                Payment::whereBetween(
-                    'payment_date',
-                    [$start->format('Y-m-d'), $end->format('Y-m-d')]
-                )
-                    ->whereCompany()
-                    ->whereCustomer($customer->id)
-                    ->sum('amount') ?? 0
-            );
-            array_push(
-                $netProfits,
-                ($receiptTotals[$i] - $expenseTotals[$i])
-            );
-            $i++;
-            array_push($months, $start->format('M'));
-            $monthCounter++;
-            $end->startOfMonth();
+
+        for ($monthCounter = 0; $monthCounter < 12; $monthCounter++) {
+            $invoiceTotal = Invoice::whereBetween('invoice_date', [
+                $start->format('Y-m-d'),
+                $end->format('Y-m-d'),
+            ])->whereCustomer($customer->id)->sum('total');
+
+            $expenseTotal = Expense::whereBetween('expense_date', [
+                $start->format('Y-m-d'),
+                $end->format('Y-m-d'),
+            ])->where('customer_id', $customer->id)->sum('amount');
+
+            $receiptTotal = Payment::whereBetween('payment_date', [
+                $start->format('Y-m-d'),
+                $end->format('Y-m-d'),
+            ])->whereCustomer($customer->id)->sum('amount');
+
+            $invoiceTotals[] = $invoiceTotal;
+            $expenseTotals[] = $expenseTotal;
+            $receiptTotals[] = $receiptTotal;
+            $netProfits[] = $receiptTotal - $expenseTotal;
+            $months[] = $start->format('M');
+
             $start->addMonth()->startOfMonth();
             $end->addMonth()->endOfMonth();
         }
 
-        $start->subMonth()->endOfMonth();
+        $periodEnd = $start->copy()->subMonth()->endOfMonth();
+        $period = [$startDate->format('Y-m-d'), $periodEnd->format('Y-m-d')];
 
-        $salesTotal = Invoice::whereBetween(
-            'invoice_date',
-            [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
-        )
-            ->whereCompany()
+        $salesTotal = Invoice::whereBetween('invoice_date', $period)
             ->whereCustomer($customer->id)
             ->sum('total');
-        $totalReceipts = Payment::whereBetween(
-            'payment_date',
-            [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
-        )
-            ->whereCompany()
+        $totalReceipts = Payment::whereBetween('payment_date', $period)
             ->whereCustomer($customer->id)
             ->sum('amount');
-        $totalExpenses = Expense::whereBetween(
-            'expense_date',
-            [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
-        )
-            ->whereCompany()
-            ->whereUser($customer->id)
+        $totalExpenses = Expense::whereBetween('expense_date', $period)
+            ->where('customer_id', $customer->id)
             ->sum('amount');
-        $netProfit = (int) $totalReceipts - (int) $totalExpenses;
 
-        $chartData = [
-            'months' => $months,
-            'invoiceTotals' => $invoiceTotals,
-            'expenseTotals' => $expenseTotals,
-            'receiptTotals' => $receiptTotals,
-            'netProfit' => $netProfit,
-            'netProfits' => $netProfits,
-            'salesTotal' => $salesTotal,
-            'totalReceipts' => $totalReceipts,
-            'totalExpenses' => $totalExpenses,
-        ];
-
-        $customer = Customer::find($customer->id);
-
-        return (new CustomerResource($customer))
+        return (new CustomerResource($customer->fresh()))
             ->additional(['meta' => [
-                'chartData' => $chartData
+                'chartData' => [
+                    'months' => $months,
+                    'invoiceTotals' => $invoiceTotals,
+                    'expenseTotals' => $expenseTotals,
+                    'receiptTotals' => $receiptTotals,
+                    'netProfit' => (int) $totalReceipts - (int) $totalExpenses,
+                    'netProfits' => $netProfits,
+                    'salesTotal' => $salesTotal,
+                    'totalReceipts' => $totalReceipts,
+                    'totalExpenses' => $totalExpenses,
+                ],
             ]]);
     }
 }

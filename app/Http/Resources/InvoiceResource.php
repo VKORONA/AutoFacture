@@ -6,16 +6,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class InvoiceResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array
-     */
     public function toArray($request)
     {
         return [
             'id' => $this->id,
+            'client_request_id' => $this->client_request_id,
             'invoice_date' => $this->invoice_date,
             'due_date' => $this->due_date,
             'invoice_number' => $this->invoice_number,
@@ -32,6 +27,8 @@ class InvoiceResource extends JsonResource
             'total' => $this->total,
             'tax' => $this->tax,
             'due_amount' => $this->due_amount,
+            'credited_amount' => (int) ($this->credited_amount ?? 0),
+            'creditable_amount' => max(0, (int) $this->total - (int) ($this->credited_amount ?? 0)),
             'sent' => $this->sent,
             'viewed' => $this->viewed,
             'unique_hash' => $this->unique_hash,
@@ -51,32 +48,22 @@ class InvoiceResource extends JsonResource
             'invoice_pdf_url' => $this->invoicePdfUrl,
             'formatted_invoice_date' => $this->formattedInvoiceDate,
             'formatted_due_date' => $this->formattedDueDate,
-            'allow_edit' => $this->allow_edit,
+            'allow_edit' => ! $this->finalized_at && $this->allow_edit,
+            'is_finalized' => (bool) $this->finalized_at,
+            'finalized_at' => $this->finalized_at,
+            'finalized_by' => $this->finalized_by,
+            'immutable_hash' => $this->immutable_hash,
             'payment_module_enabled' => $this->payment_module_enabled,
             'sales_tax_type' => $this->sales_tax_type,
             'sales_tax_address_type' => $this->sales_tax_address_type,
             'overdue' => $this->overdue,
-            'items' => $this->when($this->items()->exists(), function () {
-                return InvoiceItemResource::collection($this->items);
-            }),
-            'customer' => $this->when($this->customer()->exists(), function () {
-                return new CustomerResource($this->customer);
-            }),
-            'creator' => $this->when($this->creator()->exists(), function () {
-                return new UserResource($this->creator);
-            }),
-            'taxes' => $this->when($this->taxes()->exists(), function () {
-                return TaxResource::collection($this->taxes);
-            }),
-            'fields' => $this->when($this->fields()->exists(), function () {
-                return CustomFieldValueResource::collection($this->fields);
-            }),
-            'company' => $this->when($this->company()->exists(), function () {
-                return new CompanyResource($this->company);
-            }),
-            'currency' => $this->when($this->currency()->exists(), function () {
-                return new CurrencyResource($this->currency);
-            }),
+            'items' => $this->when($this->items()->exists(), fn () => InvoiceItemResource::collection($this->items)),
+            'customer' => $this->when($this->customer()->exists(), fn () => new CustomerResource($this->customer)),
+            'creator' => $this->whenLoaded('creator', fn () => new UserResource($this->creator)),
+            'taxes' => $this->when($this->taxes()->exists(), fn () => TaxResource::collection($this->taxes)),
+            'fields' => $this->when($this->fields()->exists(), fn () => CustomFieldValueResource::collection($this->fields)),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
+            'currency' => $this->when($this->currency()->exists(), fn () => new CurrencyResource($this->currency)),
         ];
     }
 }
