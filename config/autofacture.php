@@ -1,5 +1,7 @@
 <?php
 
+use Crater\Models\Invoice;
+
 return [
     'features' => [
         'dashboard' => env('FEATURE_DASHBOARD', true),
@@ -35,12 +37,26 @@ return [
         'backup' => env('FEATURE_BACKUP', false),
     ],
 
+    'additional_main_menu' => [
+        [
+            'title' => 'Avoirs',
+            'group' => 2,
+            'link' => '/admin/credit-notes',
+            'icon' => 'DocumentDuplicateIcon',
+            'name' => 'Credit Notes',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => Invoice::class,
+        ],
+    ],
+
     'main_menu_map' => [
         'Dashboard' => 'dashboard',
         'Customers' => 'customers',
         'Items' => 'items',
         'Estimates' => 'estimates',
         'Invoices' => 'invoices',
+        'Credit Notes' => 'invoices',
         'Recurring Invoices' => 'recurring_invoices',
         'Payments' => 'payments',
         'Expenses' => 'expenses',
@@ -70,6 +86,12 @@ return [
     ],
 
     'route_patterns' => [
+        'invoices' => [
+            'admin/invoices*',
+            'admin/credit-notes*',
+            'api/v1/invoices*',
+            'api/v1/credit-notes*',
+        ],
         'recurring_invoices' => [
             'admin/recurring-invoices*',
             'api/v1/recurring-invoice-frequency*',
