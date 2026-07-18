@@ -28,7 +28,7 @@ class CreditNotesController extends Controller
         $limit = (int) ($filters['limit'] ?? 15);
 
         $creditNotes = CreditNote::query()
-            ->with(['invoice', 'items', 'customer.currency', 'currency'])
+            ->with(['invoice', 'items', 'customer', 'currency'])
             ->when(
                 $filters['invoice_id'] ?? null,
                 fn (Builder $query, int $invoiceId): Builder => $query->where('invoice_id', $invoiceId),
@@ -71,9 +71,8 @@ class CreditNotesController extends Controller
         $creditNote->load([
             'invoice',
             'items',
-            'customer.currency',
+            'customer',
             'currency',
-            'company.address',
             'creator',
         ]);
 
