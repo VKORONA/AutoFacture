@@ -14,12 +14,13 @@ beforeEach(function () {
 
     $user = User::query()->where('role', 'super admin')->firstOrFail();
     $company = $user->companies()->firstOrFail();
+    $customer = Customer::factory()->create([
+        'company_id' => $company->id,
+        'creator_id' => $user->id,
+    ]);
 
     $this->companyId = $company->id;
-    $this->customerId = Customer::query()
-        ->where('company_id', $company->id)
-        ->firstOrFail()
-        ->id;
+    $this->customerId = $customer->id;
 
     $this->withHeaders([
         'company' => $company->id,
