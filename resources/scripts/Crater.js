@@ -38,9 +38,14 @@ export default class Crater {
 
     app.provide('$utils', utils)
 
+    const documentLocale = document.documentElement.lang
+      ? document.documentElement.lang.split('-')[0]
+      : 'fr'
+    const locale = this.messages[documentLocale] ? documentLocale : 'fr'
+
     const i18n = createI18n({
-      locale: 'en',
-      fallbackLocale: 'en',
+      locale,
+      fallbackLocale: 'fr',
       globalInjection: true,
       messages: this.messages,
     })
