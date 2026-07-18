@@ -4,8 +4,6 @@ includes:
 
 parameters:
     level: 5
-    stubFiles:
-        - phpstan-stubs/legacy-invoice-models.stub
     paths:
         - app/Domain/Invoicing
         - app/Tenancy
