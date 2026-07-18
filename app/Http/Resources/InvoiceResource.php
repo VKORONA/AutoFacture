@@ -62,10 +62,7 @@ class InvoiceResource extends JsonResource
             'creator' => $this->when($this->creator()->exists(), fn () => new UserResource($this->creator)),
             'taxes' => $this->when($this->taxes()->exists(), fn () => TaxResource::collection($this->taxes)),
             'fields' => $this->when($this->fields()->exists(), fn () => CustomFieldValueResource::collection($this->fields)),
-            'company' => $this->when(
-                ! $request->isMethod('POST') && $this->company()->exists(),
-                fn () => new CompanyResource($this->company)
-            ),
+            'company' => $this->whenLoaded('company', fn () => new CompanyResource($this->company)),
             'currency' => $this->when($this->currency()->exists(), fn () => new CurrencyResource($this->currency)),
         ];
     }
