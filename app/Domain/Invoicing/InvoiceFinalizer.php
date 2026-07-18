@@ -3,9 +3,14 @@
 namespace Crater\Domain\Invoicing;
 
 use Crater\Models\Invoice;
+use Crater\Models\InvoiceItem;
+use Crater\Models\Tax;
 use Crater\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use LogicException;
+use Throwable;
 
 class InvoiceFinalizer
 {
@@ -13,7 +18,13 @@ class InvoiceFinalizer
     {
         return DB::transaction(function () use ($invoice, $user): Invoice {
             $locked = Invoice::query()
-                ->with(['items.taxes', 'taxes', 'customer.billingAddress', 'customer.shippingAddress', 'company.address'])
+                ->with([
+                    'items.taxes',
+                    'taxes',
+                    'customer.billingAddress',
+                    'customer.shippingAddress',
+                    'company.address',
+                ])
                 ->lockForUpdate()
                 ->findOrFail($invoice->id);
 
@@ -22,10 +33,15 @@ class InvoiceFinalizer
             }
 
             $snapshot = $this->snapshot($locked);
-            $json = json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            $json = json_encode(
+                $snapshot,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            );
 
             $locked->forceFill([
-                'status' => $locked->status === Invoice::STATUS_DRAFT ? Invoice::STATUS_SENT : $locked->status,
+                'status' => $locked->status === Invoice::STATUS_DRAFT
+                    ? Invoice::STATUS_SENT
+                    : $locked->status,
                 'sent' => true,
                 'finalized_at' => now(),
                 'finalized_by' => $user?->id,
@@ -33,12 +49,14 @@ class InvoiceFinalizer
                 'finalized_snapshot' => Crypt::encryptString($json),
             ])->save();
 
-            return $locked->fresh([
+            $locked->load([
                 'items.taxes',
                 'taxes',
                 'customer',
                 'company',
             ]);
+
+            return $locked;
         }, 3);
     }
 
@@ -48,13 +66,34 @@ class InvoiceFinalizer
             return false;
         }
 
-        $json = Crypt::decryptString($invoice->finalized_snapshot);
+        try {
+            $json = Crypt::decryptString((string) $invoice->finalized_snapshot);
+        } catch (Throwable $exception) {
+            report($exception);
 
-        return hash_equals($invoice->immutable_hash, hash('sha256', $json));
+            return false;
+        }
+
+        return hash_equals((string) $invoice->immutable_hash, hash('sha256', $json));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function snapshot(Invoice $invoice): array
     {
+        $company = $invoice->company;
+        $customer = $invoice->customer;
+
+        if (! $company || ! $customer) {
+            throw new LogicException('Les données vendeur ou client de la facture sont incomplètes.');
+        }
+
+        /** @var Collection<int, InvoiceItem> $items */
+        $items = $invoice->items;
+        /** @var Collection<int, Tax> $invoiceTaxes */
+        $invoiceTaxes = $invoice->taxes;
+
         return [
             'schema' => 'autofacture.invoice.snapshot.v1',
             'invoice' => [
@@ -75,14 +114,14 @@ class InvoiceFinalizer
                 'discount_per_item' => $invoice->discount_per_item,
             ],
             'seller' => [
-                'id' => $invoice->company->id,
-                'name' => $invoice->company->name,
-                'legal_form' => $invoice->company->legal_form,
-                'siren' => $invoice->company->siren,
-                'siret' => $invoice->company->siret,
-                'vat_number' => $invoice->company->vat_number,
-                'ape_code' => $invoice->company->ape_code,
-                'address' => optional($invoice->company->address)->only([
+                'id' => $company->id,
+                'name' => $company->name,
+                'legal_form' => $company->legal_form,
+                'siren' => $company->siren,
+                'siret' => $company->siret,
+                'vat_number' => $company->vat_number,
+                'ape_code' => $company->ape_code,
+                'address' => optional($company->address)->only([
                     'name',
                     'address_street_1',
                     'address_street_2',
@@ -93,13 +132,13 @@ class InvoiceFinalizer
                 ]),
             ],
             'buyer' => [
-                'id' => $invoice->customer->id,
-                'name' => $invoice->customer->name,
-                'company_name' => $invoice->customer->company_name,
-                'siren' => $invoice->customer->siren,
-                'siret' => $invoice->customer->siret,
-                'vat_number' => $invoice->customer->vat_number,
-                'billing_address' => optional($invoice->customer->billingAddress)->only([
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'company_name' => $customer->company_name,
+                'siren' => $customer->siren,
+                'siret' => $customer->siret,
+                'vat_number' => $customer->vat_number,
+                'billing_address' => optional($customer->billingAddress)->only([
                     'name',
                     'address_street_1',
                     'address_street_2',
@@ -109,7 +148,10 @@ class InvoiceFinalizer
                     'country_id',
                 ]),
             ],
-            'items' => $invoice->items->sortBy('id')->values()->map(function ($item): array {
+            'items' => $items->sortBy('id')->values()->map(function (InvoiceItem $item): array {
+                /** @var Collection<int, Tax> $taxes */
+                $taxes = $item->taxes;
+
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
@@ -120,7 +162,7 @@ class InvoiceFinalizer
                     'discount_val' => (int) $item->discount_val,
                     'tax' => (int) $item->tax,
                     'total' => (int) $item->total,
-                    'taxes' => $item->taxes->sortBy('id')->values()->map(fn ($tax) => [
+                    'taxes' => $taxes->sortBy('id')->values()->map(fn (Tax $tax): array => [
                         'tax_type_id' => $tax->tax_type_id,
                         'name' => $tax->name,
                         'percent' => (string) $tax->percent,
@@ -128,7 +170,7 @@ class InvoiceFinalizer
                     ])->all(),
                 ];
             })->all(),
-            'taxes' => $invoice->taxes->sortBy('id')->values()->map(fn ($tax) => [
+            'taxes' => $invoiceTaxes->sortBy('id')->values()->map(fn (Tax $tax): array => [
                 'tax_type_id' => $tax->tax_type_id,
                 'name' => $tax->name,
                 'percent' => (string) $tax->percent,
