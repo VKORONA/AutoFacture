@@ -13,6 +13,7 @@ use Crater\Http\Controllers\V1\Customer\InvoicePdfController as CustomerInvoiceP
 use Crater\Http\Controllers\V1\Customer\PaymentPdfController as CustomerPaymentPdfController;
 use Crater\Http\Controllers\V1\Modules\ScriptController;
 use Crater\Http\Controllers\V1\Modules\StyleController;
+use Crater\Http\Controllers\V1\PDF\CreditNotePdfController;
 use Crater\Http\Controllers\V1\PDF\DownloadReceiptController;
 use Crater\Http\Controllers\V1\PDF\EstimatePdfController;
 use Crater\Http\Controllers\V1\PDF\InvoicePdfController;
@@ -27,7 +28,6 @@ Route::get('/modules/styles/{style}', StyleController::class);
 
 Route::get('/modules/scripts/{script}', ScriptController::class);
 
-
 // Admin Auth
 // ----------------------------------------------
 
@@ -36,7 +36,6 @@ Route::post('login', [LoginController::class, 'login']);
 Route::post('auth/logout', function () {
     Auth::guard('web')->logout();
 });
-
 
 // Customer auth
 // ----------------------------------------------
@@ -47,12 +46,10 @@ Route::post('/{company:slug}/customer/logout', function () {
     Auth::guard('customer')->logout();
 });
 
-
 // Report PDF & Expense Endpoints
 // ----------------------------------------------
 
 Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
-
     // sales report by customer
     //----------------------------------
     Route::get('/sales/customers/{hash}', CustomerSalesReportController::class);
@@ -73,22 +70,23 @@ Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
     //----------------------------------
     Route::get('/profit-loss/{hash}', ProfitLossReportController::class);
 
-
     // download expense receipt
     // -------------------------------------------------
     Route::get('/expenses/{expense}/download-receipt', DownloadReceiptController::class);
     Route::get('/expenses/{expense}/receipt', ShowReceiptController::class);
 });
 
-
 // PDF Endpoints
 // ----------------------------------------------
 
 Route::middleware('pdf-auth')->group(function () {
-
-    //  invoice pdf
+    // invoice pdf
     // -------------------------------------------------
     Route::get('/invoices/pdf/{invoice:unique_hash}', InvoicePdfController::class);
+
+    // credit note pdf
+    // -------------------------------------------------
+    Route::get('/credit-notes/pdf/{creditNote:unique_hash}', CreditNotePdfController::class);
 
     // estimate pdf
     // -------------------------------------------------
@@ -98,7 +96,6 @@ Route::middleware('pdf-auth')->group(function () {
     // -------------------------------------------------
     Route::get('/payments/pdf/{payment:unique_hash}', PaymentPdfController::class);
 });
-
 
 // customer pdf endpoints for invoice, estimate and Payment
 // -------------------------------------------------
@@ -114,14 +111,12 @@ Route::prefix('/customer')->group(function () {
     Route::get('/payments/view/{email_log:token}', [CustomerPaymentPdfController::class, 'getPdf'])->name('payment');
 });
 
-
 // Setup for installation of app
 // ----------------------------------------------
 
 Route::get('/installation', function () {
     return view('app');
 })->name('install')->middleware('redirect-if-installed');
-
 
 // Move other http requests to the Vue App
 // -------------------------------------------------
@@ -134,7 +129,7 @@ Route::get('{company:slug}/customer/{vue?}', function (Company $company) {
     return view('app')->with([
         'customer_logo' => get_company_setting('customer_portal_logo', $company->id),
         'current_theme' => get_company_setting('customer_portal_theme', $company->id),
-        'customer_page_title' => get_company_setting('customer_portal_page_title', $company->id)
+        'customer_page_title' => get_company_setting('customer_portal_page_title', $company->id),
     ]);
 })->where('vue', '[\/\w\.-]*')->name('customer.dashboard')->middleware(['install']);
 
