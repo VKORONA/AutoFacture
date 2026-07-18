@@ -17,13 +17,18 @@ class SensitiveDataServiceProvider extends ServiceProvider
         $this->protect(FileDisk::class, ['credentials'], $encrypter);
     }
 
+    /**
+     * @param  class-string<Model>  $modelClass
+     * @param  array<int, string>  $attributes
+     */
     private function protect(string $modelClass, array $attributes, EncryptedAttribute $encrypter): void
     {
         $modelClass::retrieved(function (Model $model) use ($attributes, $encrypter): void {
             $raw = $model->getAttributes();
 
             foreach ($attributes as $attribute) {
-                $raw[$attribute] = $encrypter->decrypt($raw[$attribute] ?? null);
+                $value = $raw[$attribute] ?? null;
+                $raw[$attribute] = $encrypter->decrypt(is_string($value) ? $value : null);
             }
 
             $model->setRawAttributes($raw, true);
@@ -48,7 +53,8 @@ class SensitiveDataServiceProvider extends ServiceProvider
             $raw = $model->getAttributes();
 
             foreach ($attributes as $attribute) {
-                $raw[$attribute] = $encrypter->decrypt($raw[$attribute] ?? null);
+                $value = $raw[$attribute] ?? null;
+                $raw[$attribute] = $encrypter->decrypt(is_string($value) ? $value : null);
             }
 
             $model->setRawAttributes($raw, true);
