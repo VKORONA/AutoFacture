@@ -9,6 +9,7 @@ use Crater\Http\Requests\CreditNoteIndexRequest;
 use Crater\Http\Resources\CreditNoteResource;
 use Crater\Models\CreditNote;
 use Crater\Models\Invoice;
+use Crater\Models\User;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -87,13 +88,18 @@ class CreditNotesController extends Controller
         $this->authorize('create', [CreditNote::class, $invoice]);
 
         $validated = $request->validated();
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            abort(401);
+        }
 
         try {
             $creditNote = $issuer->issue(
                 invoice: $invoice,
                 reason: (string) $validated['reason'],
                 requestedAmount: isset($validated['amount']) ? (int) $validated['amount'] : null,
-                user: $request->user(),
+                user: $user,
             );
         } catch (DomainException $exception) {
             return response()->json([
