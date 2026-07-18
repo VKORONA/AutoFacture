@@ -22,7 +22,7 @@ class InvoicesRequest extends FormRequest
 
         $rules = [
             'invoice_date' => ['required', 'date'],
-            'due_date' => ['nullable', 'date', 'after_or_equal:invoice_date'],
+            'due_date' => ['nullable', 'date'],
             'customer_id' => [
                 'required',
                 'integer',
@@ -40,9 +40,7 @@ class InvoicesRequest extends FormRequest
                         ->where('company_id', $companyId),
                 ]
                 : ['nullable', 'string', 'max:255'],
-            'client_request_id' => $isUpdate
-                ? ['nullable', 'uuid']
-                : ['required', 'uuid'],
+            'client_request_id' => ['nullable', 'uuid'],
             'exchange_rate' => ['nullable', 'numeric', 'gt:0'],
             'discount' => ['required', 'numeric', 'min:0'],
             'discount_val' => ['required', 'integer', 'min:0'],
@@ -85,10 +83,7 @@ class InvoicesRequest extends FormRequest
     {
         $companyId = (int) $this->header('company');
         $companyCurrency = CompanySetting::getSetting('currency', $companyId);
-        $customer = Customer::query()
-            ->whereKey((int) $this->input('customer_id'))
-            ->where('company_id', $companyId)
-            ->firstOrFail();
+        $customer = Customer::findOrFail((int) $this->input('customer_id'));
 
         $currentCurrency = $this->input('currency_id');
         $exchangeRate = (string) $companyCurrency !== (string) $currentCurrency
