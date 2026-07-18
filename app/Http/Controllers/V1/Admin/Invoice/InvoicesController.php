@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Controllers\V1\Admin\Invoice;
 
+use Crater\Domain\Invoicing\InvoiceCreator;
 use Crater\Domain\Invoicing\InvoiceFinalizer;
 use Crater\Http\Controllers\Controller;
 use Crater\Http\Requests;
@@ -9,7 +10,10 @@ use Crater\Http\Requests\DeleteInvoiceRequest;
 use Crater\Http\Resources\InvoiceResource;
 use Crater\Jobs\GenerateInvoicePdfJob;
 use Crater\Models\Invoice;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class InvoicesController extends Controller
 {
@@ -34,19 +38,84 @@ class InvoicesController extends Controller
             ]]);
     }
 
-    public function store(Requests\InvoicesRequest $request, InvoiceFinalizer $finalizer)
-    {
+    public function store(
+        Requests\InvoicesRequest $request,
+        InvoiceCreator $creator,
+        InvoiceFinalizer $finalizer
+    ): JsonResponse {
         $this->authorize('create', Invoice::class);
-        $invoice = Invoice::createInvoice($request);
 
-        if ($request->boolean('invoiceSend')) {
-            $invoice = $finalizer->finalize($invoice, $request->user());
-            $invoice->send($request->only(['to', 'subject', 'body']));
+        $result = $creator->create($request);
+        $invoice = $result['invoice'];
+        $created = $result['created'];
+
+        $deliveryStatus = $request->boolean('invoiceSend') ? 'pending' : 'not_requested';
+        $deliveryError = null;
+
+        if ($request->boolean('invoiceSend') && $created) {
+            try {
+                $invoice = $finalizer->finalize($invoice, $request->user());
+                $invoice->send($request->only(['to', 'subject', 'body']));
+                $deliveryStatus = 'sent';
+            } catch (Throwable $exception) {
+                report($exception);
+                Log::warning('Invoice created but email delivery failed', [
+                    'invoice_id' => $invoice->id,
+                    'company_id' => $invoice->company_id,
+                    'exception' => $exception::class,
+                ]);
+                $deliveryStatus = 'failed';
+                $deliveryError = 'La facture a été créée, mais son envoi a échoué.';
+            }
+        } elseif ($request->boolean('invoiceSend')) {
+            $deliveryStatus = 'already_processed';
         }
 
-        GenerateInvoicePdfJob::dispatch($invoice);
+        $pdfStatus = $created ? 'queued' : 'not_regenerated';
+        $pdfError = null;
 
-        return new InvoiceResource($invoice);
+        if ($created) {
+            try {
+                GenerateInvoicePdfJob::dispatch($invoice);
+                $pdfStatus = config('queue.default') === 'sync' ? 'generated' : 'queued';
+            } catch (Throwable $exception) {
+                report($exception);
+                Log::warning('Invoice created but PDF generation failed', [
+                    'invoice_id' => $invoice->id,
+                    'company_id' => $invoice->company_id,
+                    'exception' => $exception::class,
+                ]);
+                $pdfStatus = 'failed';
+                $pdfError = 'La facture a été enregistrée, mais le PDF n’a pas pu être généré.';
+            }
+        }
+
+        $invoice = Invoice::query()
+            ->with([
+                'items',
+                'items.fields',
+                'items.fields.customField',
+                'customer',
+                'taxes',
+                'company',
+                'currency',
+            ])
+            ->findOrFail($invoice->id);
+
+        $payload = (new InvoiceResource($invoice))->resolve($request);
+
+        return response()->json([
+            'data' => $payload,
+            // Compatibilité avec l’ancien store Vue qui lisait response.data.invoice.
+            'invoice' => $payload,
+            'meta' => [
+                'created' => $created,
+                'pdf_status' => $pdfStatus,
+                'pdf_error' => $pdfError,
+                'delivery_status' => $deliveryStatus,
+                'delivery_error' => $deliveryError,
+            ],
+        ], $created ? 201 : 200);
     }
 
     public function show(Request $request, Invoice $invoice)
