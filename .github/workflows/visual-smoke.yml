@@ -89,13 +89,17 @@ jobs:
 
       - name: Installer le backend
         run: |
-          cp .env.example .env
-          composer install --no-interaction --prefer-dist --no-progress
-          php artisan key:generate
-          php artisan migrate:fresh --force
-          php artisan db:seed --class=DatabaseSeeder --force
-          php artisan db:seed --class=DemoSeeder --force
-          php artisan db:seed --class=VisualSmokeSeeder --force
+          set -o pipefail
+          mkdir -p artifacts/visual-smoke
+          {
+            cp .env.example .env
+            composer install --no-interaction --prefer-dist --no-progress
+            php artisan key:generate
+            php artisan migrate:fresh --force
+            php artisan db:seed --class=DatabaseSeeder --force
+            php artisan db:seed --class=DemoSeeder --force
+            php artisan db:seed --class=VisualSmokeSeeder --force
+          } 2>&1 | tee artifacts/visual-smoke/backend-install.log
 
       - uses: actions/setup-node@v4
         with:
@@ -117,7 +121,6 @@ jobs:
 
       - name: Démarrer AutoFacture
         run: |
-          mkdir -p artifacts/visual-smoke
           php artisan serve --host=127.0.0.1 --port=8000 > artifacts/visual-smoke/laravel-server.log 2>&1 &
           echo $! > artifacts/visual-smoke/laravel-server.pid
           for attempt in $(seq 1 40); do
@@ -138,5 +141,5 @@ jobs:
         with:
           name: credit-note-visual-smoke
           path: artifacts/visual-smoke
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
