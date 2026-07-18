@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import path from 'node:path'
 
 export default defineConfig({
+  base: '/build/',
   plugins: [vue()],
   publicDir: 'resources/static',
   server: {
