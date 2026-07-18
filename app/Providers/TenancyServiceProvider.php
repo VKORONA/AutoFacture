@@ -12,13 +12,19 @@ class TenancyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(CompanyContext::class, fn () => new CompanyContext());
+        $this->app->singleton(CompanyContext::class, fn (): CompanyContext => new CompanyContext);
     }
 
     public function boot(CompanyContext $context): void
     {
-        foreach (config('tenancy.models', []) as $modelClass) {
-            if (! is_a($modelClass, Model::class, true)) {
+        $modelClasses = config('tenancy.models', []);
+
+        if (! is_array($modelClasses)) {
+            return;
+        }
+
+        foreach ($modelClasses as $modelClass) {
+            if (! is_string($modelClass) || ! is_a($modelClass, Model::class, true)) {
                 continue;
             }
 
@@ -29,7 +35,7 @@ class TenancyServiceProvider extends ServiceProvider
 
                 $builder->where(
                     $builder->getModel()->qualifyColumn('company_id'),
-                    $context->id()
+                    $context->id(),
                 );
             });
 
@@ -42,6 +48,7 @@ class TenancyServiceProvider extends ServiceProvider
 
                 if ($companyId === null) {
                     $model->setAttribute('company_id', $context->id());
+
                     return;
                 }
 
