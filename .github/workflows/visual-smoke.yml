@@ -16,6 +16,21 @@ on:
       - 'composer.lock'
       - 'package.json'
       - 'package-lock.json'
+  pull_request:
+    branches:
+      - develop/mvp-france-ai
+    paths:
+      - '.github/workflows/visual-smoke.yml'
+      - 'app/**'
+      - 'config/**'
+      - 'database/**'
+      - 'resources/**'
+      - 'routes/**'
+      - 'tests/e2e/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
 
 concurrency:
