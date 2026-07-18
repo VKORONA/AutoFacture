@@ -131,7 +131,6 @@ class VisualSmokeSeeder extends Seeder
             'discount' => 0,
             'tax' => 24000,
             'total' => 144000,
-            'taxes' => [],
         ]]);
 
         app(InvoiceFinalizer::class)->finalize($invoice, $user);
