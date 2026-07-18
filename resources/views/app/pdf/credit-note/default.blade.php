@@ -54,8 +54,39 @@
 @php
     $currencyCode = data_get($document, 'currency.code', 'EUR');
     $money = static fn ($amount) => number_format(((int) $amount) / 100, 2, ',', ' ').' '.$currencyCode;
-    $sellerAddress = array_filter((array) data_get($document, 'seller.address', []));
-    $buyerAddress = array_filter((array) data_get($document, 'buyer.address', []));
+    $formatDate = static function ($date): ?string {
+        if (! $date) {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse((string) $date)->format('d/m/Y');
+        } catch (\Throwable) {
+            return (string) $date;
+        }
+    };
+    $addressLines = static function ($address): array {
+        $address = (array) $address;
+        $street1 = $address['street_1'] ?? $address['address_street_1'] ?? null;
+        $street2 = $address['street_2'] ?? $address['address_street_2'] ?? null;
+        $postalCode = $address['postal_code'] ?? $address['zip'] ?? null;
+        $city = $address['city'] ?? null;
+        $state = $address['state'] ?? null;
+        $country = $address['country'] ?? null;
+        $postalCity = trim(implode(' ', array_filter([$postalCode, $city])));
+
+        return array_values(array_filter([
+            $street1,
+            $street2,
+            $postalCity ?: null,
+            $state,
+            $country,
+        ]));
+    };
+    $sellerAddressLines = $addressLines(data_get($document, 'seller.address', []));
+    $buyerAddressLines = $addressLines(data_get($document, 'buyer.address', []));
+    $creditNoteDate = $formatDate(data_get($document, 'credit_note.issue_date'));
+    $originalInvoiceDate = $formatDate(data_get($document, 'original_invoice.issue_date'));
 @endphp
 
 <table class="header">
@@ -66,7 +97,7 @@
         </td>
         <td class="document-meta">
             <strong>{{ data_get($document, 'credit_note.number') }}</strong><br>
-            Date d’émission : {{ data_get($document, 'credit_note.issue_date') }}
+            Date d’émission : {{ $creditNoteDate ?: 'Non renseignée' }}
         </td>
     </tr>
 </table>
@@ -76,7 +107,7 @@
         <td>
             <h2>Émetteur</h2>
             <strong>{{ data_get($document, 'seller.name') }}</strong><br>
-            @foreach ($sellerAddress as $value)
+            @foreach ($sellerAddressLines as $value)
                 {{ $value }}<br>
             @endforeach
             @if (data_get($document, 'seller.siren')) SIREN : {{ data_get($document, 'seller.siren') }}<br> @endif
@@ -86,7 +117,7 @@
         <td>
             <h2>Client</h2>
             <strong>{{ data_get($document, 'buyer.company_name') ?: data_get($document, 'buyer.name') }}</strong><br>
-            @foreach ($buyerAddress as $value)
+            @foreach ($buyerAddressLines as $value)
                 {{ $value }}<br>
             @endforeach
             @if (data_get($document, 'buyer.siren')) SIREN : {{ data_get($document, 'buyer.siren') }}<br> @endif
@@ -98,8 +129,7 @@
 
 <div class="reference">
     Cet avoir rectifie explicitement la facture
-    <strong>{{ data_get($document, 'original_invoice.number') }}</strong>
-    émise le {{ data_get($document, 'original_invoice.issue_date') }}.
+    <strong>{{ data_get($document, 'original_invoice.number') }}</strong>@if ($originalInvoiceDate), émise le {{ $originalInvoiceDate }}@endif.
 </div>
 
 <table class="lines">
