@@ -3,6 +3,7 @@
 namespace Crater\Http\Controllers\V1\Admin\Estimate;
 
 use Carbon\Carbon;
+use Crater\Domain\FrenchInvoicing\FrenchCompanySetup;
 use Crater\Http\Controllers\Controller;
 use Crater\Http\Resources\InvoiceResource;
 use Crater\Models\Company;
@@ -17,11 +18,17 @@ use Vinkla\Hashids\Facades\Hashids;
 
 class ConvertEstimateController extends Controller
 {
-    public function __invoke(Request $request, Estimate $estimate, Invoice $invoice)
-    {
+    public function __invoke(
+        Request $request,
+        Estimate $estimate,
+        Invoice $invoice,
+        FrenchCompanySetup $companySetup
+    ) {
         $this->authorize('create', Invoice::class);
 
         $companyId = (int) $request->header('company');
+        $company = Company::findOrFail($companyId);
+        $companySetup->assertComplete($company);
 
         $invoice = DB::transaction(function () use ($companyId, $estimate, $invoice): Invoice {
             Company::query()
