@@ -13,6 +13,7 @@ use Crater\Models\Company;
 use Crater\Models\Estimate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class EstimatesController extends Controller
 {
@@ -44,14 +45,19 @@ class EstimatesController extends Controller
 
         $company = Company::findOrFail((int) $request->header('company'));
         $companySetup->assertComplete($company);
+        $this->ensureLineUuids($request);
 
         $estimate = DB::transaction(function () use ($request, $assets): Estimate {
             $estimate = Estimate::createEstimate($request);
-            $assets->claimDraftAssets(
-                $estimate,
-                (string) $request->validated('asset_draft_token'),
-                (int) $request->user()->id,
-            );
+            $draftToken = $request->input('asset_draft_token');
+
+            if ($draftToken) {
+                $assets->claimDraftAssets(
+                    $estimate,
+                    (string) $draftToken,
+                    (int) $request->user()->id,
+                );
+            }
 
             return $estimate;
         });
@@ -83,14 +89,20 @@ class EstimatesController extends Controller
         EstimateAssetService $assets,
     ) {
         $this->authorize('update', $estimate);
+        $this->ensureLineUuids($request);
 
         $estimate = DB::transaction(function () use ($request, $estimate, $assets): Estimate {
             $updatedEstimate = $estimate->updateEstimate($request);
-            $assets->claimDraftAssets(
-                $updatedEstimate,
-                (string) $request->validated('asset_draft_token'),
-                (int) $request->user()->id,
-            );
+            $draftToken = $request->input('asset_draft_token');
+
+            if ($draftToken) {
+                $assets->claimDraftAssets(
+                    $updatedEstimate,
+                    (string) $draftToken,
+                    (int) $request->user()->id,
+                );
+            }
+
             $assets->removePhotosForDeletedLines($updatedEstimate);
 
             return $updatedEstimate;
@@ -101,14 +113,34 @@ class EstimatesController extends Controller
         return new EstimateResource($estimate);
     }
 
-    public function delete(DeleteEstimatesRequest $request)
+    public function delete(DeleteEstimatesRequest $request, EstimateAssetService $assets)
     {
         $this->authorize('delete multiple estimates');
 
-        Estimate::destroy($request->ids);
+        Estimate::query()
+            ->whereIn('id', $request->ids)
+            ->whereCompany()
+            ->get()
+            ->each(function (Estimate $estimate) use ($assets): void {
+                $assets->deleteAssetsForEstimate($estimate);
+                $estimate->delete();
+            });
 
         return response()->json([
             'success' => true,
         ]);
+    }
+
+    private function ensureLineUuids(EstimatesRequest $request): void
+    {
+        $items = collect($request->input('items', []))
+            ->map(function (array $item): array {
+                $item['line_uuid'] = $item['line_uuid'] ?? (string) Str::uuid();
+
+                return $item;
+            })
+            ->all();
+
+        $request->merge(['items' => $items]);
     }
 }
