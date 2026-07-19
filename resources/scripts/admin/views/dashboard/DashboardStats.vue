@@ -1,13 +1,44 @@
 <template>
-  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-9 xl:gap-8">
-    <!-- Amount Due -->
+  <section class="grid gap-5 md:grid-cols-2 2xl:grid-cols-4">
     <DashboardStatsItem
       v-if="userStore.hasAbilities(abilities.VIEW_INVOICE)"
-      :icon-component="DollarIcon"
       :loading="!dashboardStore.isDashboardDataLoaded"
       route="/admin/invoices"
-      :large="true"
-      :label="$t('dashboard.cards.due_amount')"
+      label="Chiffre d’affaires (HT)"
+      icon-text="€"
+      variant="blue"
+      :trend="dashboardStore.salesGrowthPercent"
+      description="vs N-1"
+    >
+      <BaseFormatMoney
+        :amount="dashboardStore.totalSalesHt"
+        :currency="companyStore.selectedCompanyCurrency"
+      />
+    </DashboardStatsItem>
+
+    <DashboardStatsItem
+      :loading="!dashboardStore.isDashboardDataLoaded"
+      route="/admin/payments"
+      label="Encaissements"
+      icon-text="⌂"
+      variant="green"
+      :trend="dashboardStore.receiptsGrowthPercent"
+      description="vs N-1"
+    >
+      <BaseFormatMoney
+        :amount="dashboardStore.totalReceipts"
+        :currency="companyStore.selectedCompanyCurrency"
+      />
+    </DashboardStatsItem>
+
+    <DashboardStatsItem
+      v-if="userStore.hasAbilities(abilities.VIEW_INVOICE)"
+      :loading="!dashboardStore.isDashboardDataLoaded"
+      route="/admin/invoices"
+      label="Factures en attente"
+      icon-text="◔"
+      variant="orange"
+      :description="`${dashboardStore.stats.pendingInvoiceCount} facture${dashboardStore.stats.pendingInvoiceCount > 1 ? 's' : ''}`"
     >
       <BaseFormatMoney
         :amount="dashboardStore.stats.totalAmountDue"
@@ -15,55 +46,29 @@
       />
     </DashboardStatsItem>
 
-    <!-- Customers -->
-    <DashboardStatsItem
-      v-if="userStore.hasAbilities(abilities.VIEW_CUSTOMER)"
-      :icon-component="CustomerIcon"
-      :loading="!dashboardStore.isDashboardDataLoaded"
-      route="/admin/customers"
-      :label="$t('dashboard.cards.customers')"
-    >
-      {{ dashboardStore.stats.totalCustomerCount }}
-    </DashboardStatsItem>
-
-    <!-- Invoices -->
-    <DashboardStatsItem
-      v-if="userStore.hasAbilities(abilities.VIEW_INVOICE)"
-      :icon-component="InvoiceIcon"
-      :loading="!dashboardStore.isDashboardDataLoaded"
-      route="/admin/invoices"
-      :label="$t('dashboard.cards.invoices')"
-    >
-      {{ dashboardStore.stats.totalInvoiceCount }}
-    </DashboardStatsItem>
-
-    <!-- Estimates -->
     <DashboardStatsItem
       v-if="userStore.hasAbilities(abilities.VIEW_ESTIMATE)"
-      :icon-component="EstimateIcon"
       :loading="!dashboardStore.isDashboardDataLoaded"
       route="/admin/estimates"
-      :label="$t('dashboard.cards.estimates')"
+      label="Devis en attente"
+      icon-text="▤"
+      variant="purple"
+      :description="`${dashboardStore.stats.pendingEstimateCount} devis`"
     >
-      {{ dashboardStore.stats.totalEstimateCount }}
+      <BaseFormatMoney
+        :amount="dashboardStore.stats.pendingEstimateAmount"
+        :currency="companyStore.selectedCompanyCurrency"
+      />
     </DashboardStatsItem>
-  </div>
+  </section>
 </template>
 
 <script setup>
-import DollarIcon from '@/scripts/components/icons/dashboard/DollarIcon.vue'
-import CustomerIcon from '@/scripts/components/icons/dashboard/CustomerIcon.vue'
-import InvoiceIcon from '@/scripts/components/icons/dashboard/InvoiceIcon.vue'
-import EstimateIcon from '@/scripts/components/icons/dashboard/EstimateIcon.vue'
 import abilities from '@/scripts/admin/stub/abilities'
 import DashboardStatsItem from './DashboardStatsItem.vue'
-
-import { inject } from 'vue'
 import { useDashboardStore } from '@/scripts/admin/stores/dashboard'
 import { useCompanyStore } from '@/scripts/admin/stores/company'
 import { useUserStore } from '@/scripts/admin/stores/user'
-
-const utils = inject('utils')
 
 const dashboardStore = useDashboardStore()
 const companyStore = useCompanyStore()
