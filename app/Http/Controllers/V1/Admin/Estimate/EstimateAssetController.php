@@ -13,7 +13,6 @@ use Crater\Models\EstimateLinePhoto;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class EstimateAssetController extends Controller
 {
@@ -87,7 +86,7 @@ class EstimateAssetController extends Controller
                 'file',
                 'max:15360',
                 'mimes:pdf,jpg,jpeg,png,webp',
-                Rule::notIn(['php', 'phar', 'exe', 'js', 'html']),
+                'mimetypes:application/pdf,image/jpeg,image/png,image/webp',
             ],
             'draft_token' => ['required', 'uuid'],
             'estimate_id' => ['nullable', 'integer'],
