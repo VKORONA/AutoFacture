@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('electronic_invoice_connections', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_id')->unique()->constrained()->cascadeOnDelete();
+            $table->unsignedInteger('company_id')->unique();
             $table->string('provider', 50)->default('superpdp');
             $table->string('environment', 20)->default('sandbox');
             $table->unsignedTinyInteger('setup_step')->default(1);
@@ -31,6 +31,10 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamps();
 
+            $table->foreign('company_id')
+                ->references('id')
+                ->on('companies')
+                ->cascadeOnDelete();
             $table->index(['provider', 'connection_status']);
         });
     }
