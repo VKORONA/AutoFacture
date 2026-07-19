@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Controllers\V1\Admin\Invoice;
 
+use Crater\Domain\FrenchInvoicing\FrenchCompanySetup;
 use Crater\Domain\Invoicing\InvoiceCreator;
 use Crater\Domain\Invoicing\InvoiceFinalizer;
 use Crater\Http\Controllers\Controller;
@@ -9,6 +10,7 @@ use Crater\Http\Requests;
 use Crater\Http\Requests\DeleteInvoiceRequest;
 use Crater\Http\Resources\InvoiceResource;
 use Crater\Jobs\GenerateInvoicePdfJob;
+use Crater\Models\Company;
 use Crater\Models\Invoice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,9 +43,13 @@ class InvoicesController extends Controller
     public function store(
         Requests\InvoicesRequest $request,
         InvoiceCreator $creator,
-        InvoiceFinalizer $finalizer
+        InvoiceFinalizer $finalizer,
+        FrenchCompanySetup $companySetup
     ): JsonResponse {
         $this->authorize('create', Invoice::class);
+
+        $company = Company::findOrFail((int) $request->header('company'));
+        $companySetup->assertComplete($company);
 
         $result = $creator->create($request);
         $invoice = $result['invoice'];
