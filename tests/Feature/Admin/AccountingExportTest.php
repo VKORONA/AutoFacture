@@ -7,7 +7,6 @@ use Crater\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
-use ZipArchive;
 
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
@@ -123,7 +122,7 @@ it('exports only finalized invoices in a balanced ZIP package', function () {
     Storage::disk('local')->assertExists($batch->archive_path);
     expect($batch->archive_sha256)->toHaveLength(64);
 
-    $zip = new ZipArchive;
+    $zip = new \ZipArchive;
     expect($zip->open(Storage::disk('local')->path($batch->archive_path)))->toBeTrue();
     expect($zip->locateName('ecritures-universelles.csv'))->not->toBeFalse()
         ->and($zip->locateName('journal-ventes-fec-compatible.txt'))->not->toBeFalse()
