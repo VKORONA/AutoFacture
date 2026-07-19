@@ -5,6 +5,8 @@ namespace Crater\Models;
 use Crater\Traits\HasCustomFieldsTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EstimateItem extends Model
 {
@@ -12,7 +14,7 @@ class EstimateItem extends Model
     use HasCustomFieldsTrait;
 
     protected $guarded = [
-        'id'
+        'id',
     ];
 
     protected $casts = [
@@ -24,19 +26,26 @@ class EstimateItem extends Model
         'tax' => 'integer',
     ];
 
-    public function estimate()
+    public function estimate(): BelongsTo
     {
         return $this->belongsTo(Estimate::class);
     }
 
-    public function item()
+    public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
     }
 
-    public function taxes()
+    public function taxes(): HasMany
     {
         return $this->hasMany(Tax::class);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(EstimateLinePhoto::class, 'line_uuid', 'line_uuid')
+            ->where('estimate_id', $this->estimate_id)
+            ->orderBy('sort_order');
     }
 
     public function scopeWhereCompany($query, $company_id)
