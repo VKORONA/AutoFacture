@@ -45,7 +45,7 @@ class EstimatesController extends Controller
 
         $company = Company::findOrFail((int) $request->header('company'));
         $companySetup->assertComplete($company);
-        $this->ensureLineUuids($request);
+        $this->prepareItems($request);
 
         $estimate = DB::transaction(function () use ($request, $assets): Estimate {
             $estimate = Estimate::createEstimate($request);
@@ -89,7 +89,7 @@ class EstimatesController extends Controller
         EstimateAssetService $assets,
     ) {
         $this->authorize('update', $estimate);
-        $this->ensureLineUuids($request);
+        $this->prepareItems($request);
 
         $estimate = DB::transaction(function () use ($request, $estimate, $assets): Estimate {
             $updatedEstimate = $estimate->updateEstimate($request);
@@ -131,11 +131,13 @@ class EstimatesController extends Controller
         ]);
     }
 
-    private function ensureLineUuids(EstimatesRequest $request): void
+    private function prepareItems(EstimatesRequest $request): void
     {
         $items = collect($request->input('items', []))
             ->map(function (array $item): array {
                 $item['line_uuid'] = $item['line_uuid'] ?? (string) Str::uuid();
+
+                unset($item['line_photos']);
 
                 return $item;
             })
