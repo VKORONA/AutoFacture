@@ -9,6 +9,7 @@ return [
         'items' => env('FEATURE_ITEMS', true),
         'estimates' => env('FEATURE_ESTIMATES', true),
         'invoices' => env('FEATURE_INVOICES', true),
+        'electronic_invoicing' => env('FEATURE_ELECTRONIC_INVOICING', true),
         'payments' => env('FEATURE_PAYMENTS', true),
         'users' => env('FEATURE_USERS', true),
         'settings' => env('FEATURE_SETTINGS', true),
@@ -48,6 +49,16 @@ return [
             'ability' => 'view-invoice',
             'model' => Invoice::class,
         ],
+        [
+            'title' => 'Facturation électronique',
+            'group' => 2,
+            'link' => '/admin/electronic-invoicing',
+            'icon' => 'CloudUploadIcon',
+            'name' => 'Electronic Invoicing',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => Invoice::class,
+        ],
     ],
 
     'main_menu_map' => [
@@ -57,6 +68,7 @@ return [
         'Estimates' => 'estimates',
         'Invoices' => 'invoices',
         'Credit Notes' => 'invoices',
+        'Electronic Invoicing' => 'electronic_invoicing',
         'Recurring Invoices' => 'recurring_invoices',
         'Payments' => 'payments',
         'Expenses' => 'expenses',
@@ -91,6 +103,10 @@ return [
             'admin/credit-notes*',
             'api/v1/invoices*',
             'api/v1/credit-notes*',
+        ],
+        'electronic_invoicing' => [
+            'admin/electronic-invoicing*',
+            'api/v1/electronic-invoicing*',
         ],
         'recurring_invoices' => [
             'admin/recurring-invoices*',
