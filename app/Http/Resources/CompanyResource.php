@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Resources;
 
+use Crater\Domain\FrenchInvoicing\FrenchCompanySetup;
 use Crater\Models\FileDisk;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -33,6 +34,7 @@ class CompanyResource extends JsonResource
             'unique_hash' => $this->unique_hash,
             'owner_id' => $this->owner_id,
             'slug' => $this->slug,
+            'setup' => app(FrenchCompanySetup::class)->status($this->resource),
             'address' => $this->when($this->address()->exists(), function () {
                 return new AddressResource($this->address);
             }),
