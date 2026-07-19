@@ -62,17 +62,19 @@ class EstimateAssetController extends Controller
     public function showPhoto(Request $request, EstimateLinePhoto $photo, string $variant = 'preview')
     {
         $this->assertAssetAccess($request, $photo->company_id, $photo->user_id, $photo->estimate, readOnly: true);
+        $path = $photo->variantPath($variant);
 
-        $path = match ($variant) {
-            'thumbnail' => $photo->thumbnail_path,
-            'image' => $photo->image_path,
-            default => $photo->preview_path,
+        abort_unless($path && Storage::disk($photo->disk)->exists($path), 404);
+
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $mime = match ($extension) {
+            'webp' => 'image/webp',
+            'png' => 'image/png',
+            default => 'image/jpeg',
         };
 
-        abort_unless(Storage::disk($photo->disk)->exists($path), 404);
-
         return response(Storage::disk($photo->disk)->get($path), 200, [
-            'Content-Type' => 'image/jpeg',
+            'Content-Type' => $mime,
             'Cache-Control' => 'private, max-age=3600',
             'X-Content-Type-Options' => 'nosniff',
         ]);
