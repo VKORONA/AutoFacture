@@ -111,7 +111,11 @@ it('claims draft photos and annex attachments when the estimate is saved', funct
     ])->assertCreated();
 
     post('/api/v1/estimate-assets/attachments', [
-        'attachment' => UploadedFile::fake()->createWithContent('notice-technique.pdf', '%PDF-1.4 test'),
+        'attachment' => UploadedFile::fake()->create(
+            'notice-technique.pdf',
+            12,
+            'application/pdf'
+        ),
         'draft_token' => $draftToken,
     ])->assertCreated();
 
