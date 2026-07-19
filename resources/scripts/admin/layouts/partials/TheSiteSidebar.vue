@@ -27,10 +27,49 @@
         leave-to="-translate-x-full"
       >
         <div class="relative flex w-full max-w-[290px] flex-col">
-          <PremiumSidebarContent @navigate="globalStore.setSidebarVisibility(false)" />
+          <div class="premium-sidebar mobile-sidebar">
+            <div class="brand-wrap">
+              <router-link to="/admin/dashboard" @click="closeMobileSidebar">
+                <MainLogo class="h-auto w-[190px]" light-color="#38bdf8" dark-color="#ffffff" />
+              </router-link>
+            </div>
+
+            <nav class="sidebar-nav">
+              <template v-for="(menu, groupIndex) in globalStore.menuGroups" :key="groupIndex">
+                <router-link
+                  v-for="item in menu"
+                  :key="item.name || item.link"
+                  :to="item.link"
+                  class="sidebar-link"
+                  :class="{ active: hasActiveUrl(item.link) }"
+                  @click="closeMobileSidebar"
+                >
+                  <BaseIcon :name="item.icon" class="sidebar-icon" />
+                  <span>{{ $t(item.title) }}</span>
+                </router-link>
+              </template>
+            </nav>
+
+            <div class="quick-section">
+              <p>Actions rapides</p>
+              <router-link to="/admin/estimates/create" class="quick-link" @click="closeMobileSidebar">
+                <span class="quick-icon green">+</span> Nouveau devis
+              </router-link>
+              <router-link to="/admin/invoices/create" class="quick-link" @click="closeMobileSidebar">
+                <span class="quick-icon purple">+</span> Nouvelle facture
+              </router-link>
+              <router-link to="/admin/customers/create" class="quick-link" @click="closeMobileSidebar">
+                <span class="quick-icon blue">+</span> Nouveau client
+              </router-link>
+              <router-link to="/admin/settings/backup" class="quick-link" @click="closeMobileSidebar">
+                <span class="quick-icon orange">↥</span> Sauvegarde
+              </router-link>
+            </div>
+          </div>
+
           <button
             class="absolute -right-12 top-3 flex h-10 w-10 items-center justify-center rounded-full text-white"
-            @click="globalStore.setSidebarVisibility(false)"
+            @click="closeMobileSidebar"
           >
             <BaseIcon name="XIcon" class="h-6 w-6" />
           </button>
@@ -104,7 +143,7 @@
 </template>
 
 <script setup>
-import { computed, defineComponent, h, ref } from 'vue'
+import { computed, ref } from 'vue'
 import {
   Dialog,
   DialogOverlay,
@@ -133,42 +172,9 @@ function hasActiveUrl(url) {
   return route.path === url || route.path.startsWith(`${url}/`)
 }
 
-const PremiumSidebarContent = defineComponent({
-  emits: ['navigate'],
-  setup(_, { emit }) {
-    return () =>
-      h('div', { class: 'premium-sidebar mobile-sidebar' }, [
-        h('div', { class: 'brand-wrap' }, [
-          h(MainLogo, {
-            class: 'h-auto w-[190px]',
-            lightColor: '#38bdf8',
-            darkColor: '#ffffff',
-          }),
-        ]),
-        h(
-          'nav',
-          { class: 'sidebar-nav' },
-          globalStore.menuGroups.flatMap((menu) =>
-            menu.map((item) =>
-              h(
-                'a',
-                {
-                  href: item.link,
-                  class: ['sidebar-link', { active: hasActiveUrl(item.link) }],
-                  onClick: (event) => {
-                    event.preventDefault()
-                    emit('navigate')
-                    window.location.assign(item.link)
-                  },
-                },
-                [h('span', { class: 'mobile-link-dot' }), h('span', item.title)]
-              )
-            )
-          )
-        ),
-      ])
-  },
-})
+function closeMobileSidebar() {
+  globalStore.setSidebarVisibility(false)
+}
 </script>
 
 <style scoped>
@@ -195,7 +201,6 @@ const PremiumSidebarContent = defineComponent({
 .sidebar-link.active { color: #fff; border-color: rgba(147,197,253,.65); background: linear-gradient(100deg,#0284c7 0%,#2563eb 42%,#7c3aed 100%); box-shadow: 0 0 24px rgba(59,130,246,.45), inset 0 1px rgba(255,255,255,.18); }
 .sidebar-icon { width: 19px; height: 19px; color: #93c5fd; }
 .sidebar-link.active .sidebar-icon { color: #fff; }
-.mobile-link-dot { width: 7px; height: 7px; border-radius: 999px; background: #60a5fa; }
 .quick-section { margin: 20px 18px 0; padding-top: 17px; border-top: 1px solid rgba(148,163,184,.16); }
 .quick-section > p { margin: 0 0 10px 5px; color: #7f94bc; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
 .quick-link { display: flex; align-items: center; gap: 11px; min-height: 38px; padding: 0 6px; color: #dbeafe; font-size: .72rem; transition: color .18s ease; }
