@@ -169,7 +169,7 @@ it('claims draft photos and annex attachments when the estimate is saved', funct
 });
 
 it('refuses executable files as estimate annexes', function () {
-    post('/api/v1/estimate-assets/attachments', [
+    postJson('/api/v1/estimate-assets/attachments', [
         'attachment' => UploadedFile::fake()->create('programme.exe', 10, 'application/x-msdownload'),
         'draft_token' => (string) Str::uuid(),
     ])->assertStatus(422);
