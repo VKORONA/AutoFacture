@@ -8,7 +8,8 @@ use Crater\Models\EstimateLinePhoto;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManagerStatic as Image;
+use Intervention\Image\Image;
+use Intervention\Image\ImageManagerStatic as ImageManager;
 
 class EstimateAssetService
 {
@@ -45,22 +46,44 @@ class EstimateAssetService
             $lineUuid,
         );
 
-        $image = Image::make($file->getRealPath())->orientate();
-        $normalized = clone $image;
-        $preview = clone $image;
-        $thumbnail = clone $image;
+        $source = ImageManager::make($file->getRealPath())->orientate();
+        $main = clone $source;
+        $preview = clone $source;
+        $thumbnail = clone $source;
+        $pdf = clone $source;
 
-        $this->normalizeToCanvas($normalized, 1600, 1200);
+        $this->normalizeToCanvas($main, 1600, 1200);
         $this->normalizeToCanvas($preview, 800, 600);
-        $this->normalizeToCanvas($thumbnail, 240, 180);
+        $this->normalizeToCanvas($thumbnail, 320, 240);
+        $this->normalizeToCanvas($pdf, 1600, 1200);
 
-        $imagePath = $baseDirectory.'/'.$assetId.'.jpg';
-        $previewPath = $baseDirectory.'/'.$assetId.'-preview.jpg';
-        $thumbnailPath = $baseDirectory.'/'.$assetId.'-thumb.jpg';
+        $webFormat = function_exists('imagewebp') ? 'webp' : 'jpg';
+        $webExtension = $webFormat === 'webp' ? 'webp' : 'jpg';
+        $webMime = $webFormat === 'webp' ? 'image/webp' : 'image/jpeg';
 
-        Storage::disk($disk)->put($imagePath, (string) $normalized->encode('jpg', 86));
-        Storage::disk($disk)->put($previewPath, (string) $preview->encode('jpg', 84));
-        Storage::disk($disk)->put($thumbnailPath, (string) $thumbnail->encode('jpg', 82));
+        $mainBytes = $this->encodeToTarget($main, $webFormat, 80, 700 * 1024, 62);
+        $previewBytes = $this->encodeToTarget($preview, $webFormat, 78, 260 * 1024, 58);
+        $thumbnailBytes = $this->encodeToTarget($thumbnail, $webFormat, 72, 80 * 1024, 52);
+        $pdfBytes = $this->encodeToTarget($pdf, 'jpg', 84, 900 * 1024, 68);
+        $checksum = hash('sha256', $mainBytes);
+
+        abort_if(
+            (clone $query)->where('checksum_sha256', $checksum)->exists(),
+            422,
+            'Cette photo est déjà associée à cette ligne de devis.'
+        );
+
+        $imagePath = $baseDirectory.'/'.$assetId.'.'.$webExtension;
+        $previewPath = $baseDirectory.'/'.$assetId.'-preview.'.$webExtension;
+        $thumbnailPath = $baseDirectory.'/'.$assetId.'-thumb.'.$webExtension;
+        $pdfPath = $baseDirectory.'/'.$assetId.'-pdf.jpg';
+
+        Storage::disk($disk)->put($imagePath, $mainBytes);
+        Storage::disk($disk)->put($previewPath, $previewBytes);
+        Storage::disk($disk)->put($thumbnailPath, $thumbnailBytes);
+        Storage::disk($disk)->put($pdfPath, $pdfBytes);
+
+        $webSize = strlen($mainBytes) + strlen($previewBytes) + strlen($thumbnailBytes);
 
         return EstimateLinePhoto::create([
             'company_id' => $companyId,
@@ -70,11 +93,15 @@ class EstimateAssetService
             'draft_token' => $estimate ? null : $draftToken,
             'disk' => $disk,
             'original_name' => $file->getClientOriginalName(),
-            'mime_type' => 'image/jpeg',
+            'mime_type' => $webMime,
             'image_path' => $imagePath,
             'preview_path' => $previewPath,
             'thumbnail_path' => $thumbnailPath,
-            'size_bytes' => Storage::disk($disk)->size($imagePath),
+            'pdf_path' => $pdfPath,
+            'checksum_sha256' => $checksum,
+            'size_bytes' => strlen($mainBytes),
+            'web_size_bytes' => $webSize,
+            'pdf_size_bytes' => strlen($pdfBytes),
             'width' => 1600,
             'height' => 1200,
             'sort_order' => (int) ($query->max('sort_order') ?? -1) + 1,
@@ -177,11 +204,12 @@ class EstimateAssetService
 
     public function deletePhoto(EstimateLinePhoto $photo): void
     {
-        Storage::disk($photo->disk)->delete([
+        Storage::disk($photo->disk)->delete(array_values(array_filter([
             $photo->image_path,
             $photo->preview_path,
             $photo->thumbnail_path,
-        ]);
+            $photo->pdf_path,
+        ])));
 
         $photo->delete();
     }
@@ -192,7 +220,7 @@ class EstimateAssetService
         $attachment->delete();
     }
 
-    private function normalizeToCanvas($image, int $width, int $height): void
+    private function normalizeToCanvas(Image $image, int $width, int $height): void
     {
         $image->resize($width, $height, function ($constraint): void {
             $constraint->aspectRatio();
@@ -200,5 +228,23 @@ class EstimateAssetService
         });
 
         $image->resizeCanvas($width, $height, 'center', false, '#ffffff');
+    }
+
+    private function encodeToTarget(
+        Image $image,
+        string $format,
+        int $startQuality,
+        int $targetBytes,
+        int $minimumQuality,
+    ): string {
+        $quality = $startQuality;
+        $encoded = (string) (clone $image)->encode($format, $quality);
+
+        while (strlen($encoded) > $targetBytes && $quality > $minimumQuality) {
+            $quality = max($minimumQuality, $quality - 4);
+            $encoded = (string) (clone $image)->encode($format, $quality);
+        }
+
+        return $encoded;
     }
 }
