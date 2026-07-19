@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use RuntimeException;
 
 class GenerateInvoicePdfJob implements ShouldQueue
 {
@@ -19,25 +20,23 @@ class GenerateInvoicePdfJob implements ShouldQueue
 
     public $deleteExistingFile;
 
-    /**
-     * Create a new job instance.
-     *
-     * @return void
-     */
     public function __construct($invoice, $deleteExistingFile = false)
     {
         $this->invoice = $invoice;
         $this->deleteExistingFile = $deleteExistingFile;
     }
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
-    public function handle()
+    public function handle(): int
     {
-        $this->invoice->generatePDF('invoice', $this->invoice->invoice_number, $this->deleteExistingFile);
+        $result = $this->invoice->generatePDF(
+            'invoice',
+            $this->invoice->invoice_number,
+            $this->deleteExistingFile
+        );
+
+        if (is_string($result) && $result !== '') {
+            throw new RuntimeException($result);
+        }
 
         return 0;
     }

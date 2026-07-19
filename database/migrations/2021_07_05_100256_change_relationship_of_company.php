@@ -7,38 +7,26 @@ use Illuminate\Support\Facades\Schema;
 
 class ChangeRelationshipOfCompany extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        $users = User::all();
-
-        if ($users) {
-            foreach ($users as $user) {
-                $user->companies()->attach($user->company_id);
+        foreach (User::all() as $user) {
+            if ($user->company_id) {
+                $user->companies()->syncWithoutDetaching([$user->company_id]);
                 $user->company_id = null;
                 $user->save();
             }
         }
 
-        Schema::table('users', function (Blueprint $table) {
-            if (config('database.default') !== 'sqlite') {
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::table('users', function (Blueprint $table): void {
                 $table->dropForeign(['company_id']);
-            }
-            $table->dropColumn('company_id');
-        });
+                $table->dropColumn('company_id');
+            });
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        //
+        // Migration historique non réversible.
     }
 }

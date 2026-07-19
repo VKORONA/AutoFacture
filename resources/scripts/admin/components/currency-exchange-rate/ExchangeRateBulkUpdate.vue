@@ -13,23 +13,23 @@
 
     <form action="" @submit.prevent="submitBulkUpdate">
       <ValidateEach
-        v-for="(c, i) in exchangeRateStore.bulkCurrencies"
-        :key="i"
-        :state="c"
+        v-for="(currency, index) in exchangeRateStore.bulkCurrencies"
+        :key="index"
+        :state="currency"
         :rules="currencyArrayRules"
       >
         <template #default="{ v }">
           <BaseInputGroup
             class="my-5"
-            :label="`${c.code} to ${companyStore.selectedCompanyCurrency.code}`"
+            :label="`${currency.code} to ${companyStore.selectedCompanyCurrency.code}`"
             :error="
               v.exchange_rate.$error && v.exchange_rate.$errors[0].$message
             "
             required
           >
             <BaseInput
-              v-model="c.exchange_rate"
-              :addon="`1 ${c.code} =`"
+              v-model="currency.exchange_rate"
+              :addon="`1 ${currency.code} =`"
               :invalid="v.exchange_rate.$error"
               @input="v.exchange_rate.$touch()"
             >
@@ -42,7 +42,7 @@
             <span class="text-gray-400 text-xs mt-2 font-light">
               {{
                 $t('settings.exchange_rate.exchange_help_text', {
-                  currency: c.code,
+                  currency: currency.code,
                   baseCurrency: companyStore.selectedCompanyCurrency.code,
                 })
               }}
@@ -51,7 +51,6 @@
         </template>
       </ValidateEach>
       <div
-        slot="footer"
         class="
           z-0
           flex
@@ -70,23 +69,20 @@
 </template>
 
 <script setup>
-import { useExchangeRateStore } from '@/scripts/admin/stores/exchange-rate'
-import { useCompanyStore } from '@/scripts/admin/stores/company'
-import { useRoute } from 'vue-router'
-import { useNotificationStore } from '@/scripts/stores/notification'
-import { computed, ref } from '@vue/runtime-core'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import useVuelidate from '@vuelidate/core'
-import { required, helpers, numeric, decimal } from '@vuelidate/validators'
+import { decimal, helpers, required } from '@vuelidate/validators'
 import { ValidateEach } from '@vuelidate/components'
+import { useExchangeRateStore } from '@/scripts/admin/stores/exchange-rate'
+import { useCompanyStore } from '@/scripts/admin/stores/company'
 
 const exchangeRateStore = useExchangeRateStore()
-const notificationStore = useNotificationStore()
 const companyStore = useCompanyStore()
-
-const { t, tm } = useI18n()
-let isSaving = ref(false)
-let isLoading = ref(false)
+const { t } = useI18n()
+const isSaving = ref(false)
+const v = useVuelidate()
+const emit = defineEmits(['update'])
 
 const currencyArrayRules = {
   exchange_rate: {
@@ -94,26 +90,24 @@ const currencyArrayRules = {
     decimal: helpers.withMessage(t('validation.valid_exchange_rate'), decimal),
   },
 }
-const v = useVuelidate()
-
-const emit = defineEmits(['update'])
 
 async function submitBulkUpdate() {
   v.value.$touch()
-  if (v.value.$invalid) {
-    return true
-  }
+  if (v.value.$invalid) return
+
   isSaving.value = true
-  let data = exchangeRateStore.bulkCurrencies.map((_c) => {
-    return {
-      id: _c.id,
-      exchange_rate: _c.exchange_rate,
+  try {
+    const currencies = exchangeRateStore.bulkCurrencies.map((currency) => ({
+      id: currency.id,
+      exchange_rate: currency.exchange_rate,
+    }))
+    const response = await exchangeRateStore.updateBulkExchangeRate({ currencies })
+
+    if (response.data.success) {
+      emit('update', response.data.success)
     }
-  })
-  let res = await exchangeRateStore.updateBulkExchangeRate({ currencies: data })
-  if (res.data.success) {
-    emit('update', res.data.success)
+  } finally {
+    isSaving.value = false
   }
-  isSaving.value = false
 }
 </script>

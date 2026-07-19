@@ -1,0 +1,84 @@
+<?php
+
+namespace Crater\Providers;
+
+use Crater\Models\Company;
+use Crater\Models\FileDisk;
+use Crater\Security\EncryptedAttribute;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
+
+class SensitiveDataServiceProvider extends ServiceProvider
+{
+    public function boot(EncryptedAttribute $encrypter): void
+    {
+        $this->protect(Company::class, ['iban', 'bic'], $encrypter);
+        $this->protect(FileDisk::class, ['credentials'], $encrypter);
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     * @param  array<int, string>  $attributes
+     */
+    private function protect(string $modelClass, array $attributes, EncryptedAttribute $encrypter): void
+    {
+        $modelClass::retrieved(function (Model $model) use ($attributes, $encrypter): void {
+            $raw = $model->getAttributes();
+
+            foreach ($attributes as $attribute) {
+                $value = $raw[$attribute] ?? null;
+                $raw[$attribute] = $encrypter->decrypt(is_string($value) ? $value : null);
+            }
+
+            $model->setRawAttributes($raw, true);
+        });
+
+        $modelClass::saving(function (Model $model) use ($attributes, $encrypter): void {
+            $raw = $model->getAttributes();
+
+            foreach ($attributes as $attribute) {
+                if (! $this->columnCanStoreEncryptedPayload($model, $attribute)) {
+                    continue;
+                }
+
+                $value = $raw[$attribute] ?? null;
+                $raw[$attribute] = $encrypter->encrypt($value === null ? null : (string) $value);
+            }
+
+            $model->setRawAttributes($raw);
+        });
+
+        $modelClass::saved(function (Model $model) use ($attributes, $encrypter): void {
+            $raw = $model->getAttributes();
+
+            foreach ($attributes as $attribute) {
+                $value = $raw[$attribute] ?? null;
+                $raw[$attribute] = $encrypter->decrypt(is_string($value) ? $value : null);
+            }
+
+            $model->setRawAttributes($raw, true);
+        });
+    }
+
+    private function columnCanStoreEncryptedPayload(Model $model, string $attribute): bool
+    {
+        $table = $model->getTable();
+
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $attribute)) {
+            return false;
+        }
+
+        /*
+         * Le champ credentials historique est un JSON MariaDB, donc un
+         * LONGTEXT avec une contrainte JSON. Il ne peut recevoir le préfixe
+         * chiffré qu'après la migration qui crée integration_secrets et retire
+         * cette contrainte.
+         */
+        if ($model instanceof FileDisk && ! Schema::hasTable('integration_secrets')) {
+            return false;
+        }
+
+        return true;
+    }
+}

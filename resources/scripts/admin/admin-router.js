@@ -88,6 +88,12 @@ const InvoiceCreate = () =>
   import('@/scripts/admin/views/invoices/create/InvoiceCreate.vue')
 const InvoiceView = () => import('@/scripts/admin/views/invoices/View.vue')
 
+// Credit Notes
+const CreditNoteIndex = () =>
+  import('@/scripts/admin/views/credit-notes/Index.vue')
+const CreditNoteView = () =>
+  import('@/scripts/admin/views/credit-notes/View.vue')
+
 // Recurring Invoice
 const RecurringInvoiceIndex = () =>
   import('@/scripts/admin/views/recurring-invoices/Index.vue')
@@ -438,6 +444,20 @@ export default [
         name: 'invoices.edit',
         meta: { ability: abilities.EDIT_INVOICE },
         component: InvoiceCreate,
+      },
+
+      // Credit Notes
+      {
+        path: 'credit-notes',
+        name: 'credit-notes.index',
+        meta: { ability: abilities.VIEW_INVOICE },
+        component: CreditNoteIndex,
+      },
+      {
+        path: 'credit-notes/:id/view',
+        name: 'credit-notes.view',
+        meta: { ability: abilities.VIEW_INVOICE },
+        component: CreditNoteView,
       },
 
       // Recurring Invoices

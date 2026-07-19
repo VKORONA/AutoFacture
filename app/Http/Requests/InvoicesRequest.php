@@ -10,127 +10,108 @@ use Illuminate\Validation\Rule;
 
 class InvoicesRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     *
-     * @return bool
-     */
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.s
-     *
-     * @return array
-     */
-    public function rules()
+    public function rules(): array
     {
+        $companyId = (int) $this->header('company');
+        $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
+
         $rules = [
-            'invoice_date' => [
-                'required',
-            ],
-            'due_date' => [
-                'nullable',
-            ],
+            'invoice_date' => ['required', 'date'],
+            'due_date' => ['nullable', 'date'],
             'customer_id' => [
                 'required',
+                'integer',
+                Rule::exists('customers', 'id')->where(
+                    static fn ($query) => $query->where('company_id', $companyId)
+                ),
             ],
-            'invoice_number' => [
-                'required',
-                Rule::unique('invoices')->where('company_id', $this->header('company'))
-            ],
-            'exchange_rate' => [
-                'nullable'
-            ],
-            'discount' => [
-                'required',
-            ],
-            'discount_val' => [
-                'required',
-            ],
-            'sub_total' => [
-                'required',
-            ],
-            'total' => [
-                'required',
-            ],
-            'tax' => [
-                'required',
-            ],
+            'invoice_number' => $isUpdate
+                ? [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('invoices')
+                        ->ignore($this->route('invoice')->id)
+                        ->where('company_id', $companyId),
+                ]
+                : ['nullable', 'string', 'max:255'],
+            'client_request_id' => ['nullable', 'uuid'],
+            'exchange_rate' => ['nullable', 'numeric', 'gt:0'],
+            'discount' => ['required', 'numeric', 'min:0'],
+            'discount_val' => ['required', 'integer', 'min:0'],
+            'sub_total' => ['nullable', 'integer', 'min:0'],
+            'total' => ['nullable', 'integer', 'min:0'],
+            'tax' => ['nullable', 'integer'],
             'template_name' => [
-                'required'
-            ],
-            'items' => [
                 'required',
-                'array',
+                'string',
+                'max:100',
+                'regex:/^[A-Za-z0-9_-]+$/',
             ],
-            'items.*' => [
-                'required',
-                'max:255',
-            ],
-            'items.*.description' => [
-                'nullable',
-            ],
-            'items.*.name' => [
-                'required',
-            ],
-            'items.*.quantity' => [
-                'required',
-            ],
-            'items.*.price' => [
-                'required',
-            ],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*' => ['required', 'array'],
+            'items.*.description' => ['nullable', 'string'],
+            'items.*.name' => ['required', 'string', 'max:255'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'items.*.price' => ['required', 'integer', 'min:0'],
+            'items.*.discount_val' => ['nullable', 'integer', 'min:0'],
+            'items.*.tax' => ['nullable', 'integer'],
+            'items.*.total' => ['required', 'integer', 'min:0'],
+            'taxes' => ['nullable', 'array'],
+            'taxes.*.amount' => ['nullable', 'integer'],
         ];
 
-        $companyCurrency = CompanySetting::getSetting('currency', $this->header('company'));
+        $companyCurrency = CompanySetting::getSetting('currency', $companyId);
+        $customer = Customer::query()
+            ->whereKey((int) $this->input('customer_id'))
+            ->where('company_id', $companyId)
+            ->first();
 
-        $customer = Customer::find($this->customer_id);
-
-        if ($customer && $companyCurrency) {
-            if ((string)$customer->currency_id !== $companyCurrency) {
-                $rules['exchange_rate'] = [
-                    'required',
-                ];
-            };
-        }
-
-        if ($this->isMethod('PUT')) {
-            $rules['invoice_number'] = [
-                'required',
-                Rule::unique('invoices')
-                    ->ignore($this->route('invoice')->id)
-                    ->where('company_id', $this->header('company')),
-            ];
+        if ($customer && $companyCurrency && (string) $customer->currency_id !== (string) $companyCurrency) {
+            $rules['exchange_rate'] = ['required', 'numeric', 'gt:0'];
         }
 
         return $rules;
     }
 
-    public function getInvoicePayload()
+    public function getInvoicePayload(): array
     {
-        $company_currency = CompanySetting::getSetting('currency', $this->header('company'));
-        $current_currency = $this->currency_id;
-        $exchange_rate = $company_currency != $current_currency ? $this->exchange_rate : 1;
-        $currency = Customer::find($this->customer_id)->currency_id;
+        $customer = Customer::findOrFail((int) $this->input('customer_id'));
+        $companyId = (int) ($this->header('company') ?: $customer->company_id);
+        $companyCurrency = CompanySetting::getSetting('currency', $companyId);
 
-        return collect($this->except('items', 'taxes'))
+        $currentCurrency = $this->input('currency_id');
+        $exchangeRate = (string) $companyCurrency !== (string) $currentCurrency
+            ? (float) $this->input('exchange_rate')
+            : 1.0;
+
+        $excluded = ['items', 'taxes'];
+
+        if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
+            $excluded[] = 'client_request_id';
+        }
+
+        return collect($this->except($excluded))
             ->merge([
                 'creator_id' => $this->user()->id ?? null,
                 'status' => $this->has('invoiceSend') ? Invoice::STATUS_SENT : Invoice::STATUS_DRAFT,
                 'paid_status' => Invoice::STATUS_UNPAID,
-                'company_id' => $this->header('company'),
-                'tax_per_item' => CompanySetting::getSetting('tax_per_item', $this->header('company')) ?? 'NO ',
-                'discount_per_item' => CompanySetting::getSetting('discount_per_item', $this->header('company')) ?? 'NO',
-                'due_amount' => $this->total,
-                'exchange_rate' => $exchange_rate,
-                'base_total' => $this->total * $exchange_rate,
-                'base_discount_val' => $this->discount_val * $exchange_rate,
-                'base_sub_total' => $this->sub_total * $exchange_rate,
-                'base_tax' => $this->tax * $exchange_rate,
-                'base_due_amount' => $this->total * $exchange_rate,
-                'currency_id' => $currency,
+                'company_id' => $companyId,
+                'tax_per_item' => trim((string) (CompanySetting::getSetting('tax_per_item', $companyId) ?? 'NO')),
+                'discount_per_item' => trim((string) (CompanySetting::getSetting('discount_per_item', $companyId) ?? 'NO')),
+                'due_amount' => (int) $this->input('total'),
+                'exchange_rate' => $exchangeRate,
+                'base_total' => (int) round((float) $this->input('total') * $exchangeRate),
+                'base_discount_val' => (int) round((float) $this->input('discount_val') * $exchangeRate),
+                'base_sub_total' => (int) round((float) $this->input('sub_total') * $exchangeRate),
+                'base_tax' => (int) round((float) $this->input('tax') * $exchangeRate),
+                'base_due_amount' => (int) round((float) $this->input('total') * $exchangeRate),
+                'currency_id' => $customer->currency_id,
             ])
             ->toArray();
     }

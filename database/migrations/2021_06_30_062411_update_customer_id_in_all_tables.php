@@ -16,109 +16,75 @@ use Illuminate\Support\Str;
 
 class UpdateCustomerIdInAllTables extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        $users = User::where('role', 'customer')
-            ->get();
-
+        $users = User::where('role', 'customer')->get();
         $users->makeVisible('password', 'remember_token');
 
-        if ($users) {
-            foreach ($users as $user) {
-                $newCustomer = Customer::create($user->toArray());
+        foreach ($users as $user) {
+            $newCustomer = Customer::create($user->toArray());
 
-                Address::where('user_id', $user->id)->update([
-                    'customer_id' => $newCustomer->id,
-                    'user_id' => null
+            Address::where('user_id', $user->id)->update([
+                'customer_id' => $newCustomer->id,
+                'user_id' => null,
+            ]);
+            Expense::where('user_id', $user->id)->update([
+                'customer_id' => $newCustomer->id,
+                'user_id' => null,
+            ]);
+            Estimate::where('user_id', $user->id)->update([
+                'customer_id' => $newCustomer->id,
+                'user_id' => null,
+            ]);
+            Invoice::where('user_id', $user->id)->update([
+                'customer_id' => $newCustomer->id,
+                'user_id' => null,
+            ]);
+            Payment::where('user_id', $user->id)->update([
+                'customer_id' => $newCustomer->id,
+                'user_id' => null,
+            ]);
+
+            CustomFieldValue::where('custom_field_valuable_id', $user->id)
+                ->where('custom_field_valuable_type', 'Crater\\Models\\User')
+                ->update([
+                    'custom_field_valuable_type' => 'Crater\\Models\\Customer',
+                    'custom_field_valuable_id' => $newCustomer->id,
                 ]);
+        }
 
-                Expense::where('user_id', $user->id)->update([
-                    'customer_id' => $newCustomer->id,
-                    'user_id' => null
-                ]);
+        foreach (CustomField::where('model_type', 'User')->get() as $customField) {
+            $customField->model_type = 'Customer';
+            $customField->slug = Str::upper(
+                'CUSTOM_'.$customField->model_type.'_'.Str::slug($customField->label, '_')
+            );
+            $customField->save();
+        }
 
-                Estimate::where('user_id', $user->id)->update([
-                    'customer_id' => $newCustomer->id,
-                    'user_id' => null
-                ]);
-
-                Invoice::where('user_id', $user->id)->update([
-                    'customer_id' => $newCustomer->id,
-                    'user_id' => null
-                ]);
-
-                Payment::where('user_id', $user->id)->update([
-                    'customer_id' => $newCustomer->id,
-                    'user_id' => null
-                ]);
-
-                CustomFieldValue::where('custom_field_valuable_id', $user->id)
-                    ->where('custom_field_valuable_type', 'Crater\Models\User')
-                    ->update([
-                        'custom_field_valuable_type' => 'Crater\Models\Customer',
-                        'custom_field_valuable_id' => $newCustomer->id
-                    ]);
-            }
-
-            $customFields = CustomField::where('model_type', 'User')->get();
-
-            if ($customFields) {
-                foreach ($customFields as $customField) {
-                    $customField->model_type = "Customer";
-                    $customField->slug = Str::upper('CUSTOM_'.$customField->model_type.'_'.Str::slug($customField->label, '_'));
-                    $customField->save();
-                }
+        /*
+         * Laravel 12 reconstruit les tables SQLite pour supprimer une colonne.
+         * Les anciennes clés étrangères Crater rendent cette reconstruction
+         * invalide. SQLite n'est utilisé que pour les tests : on y conserve
+         * ces colonnes historiques, tandis que MySQL/MariaDB les supprime.
+         */
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            foreach (['estimates', 'expenses', 'invoices', 'payments'] as $tableName) {
+                Schema::table($tableName, function (Blueprint $table): void {
+                    $table->dropForeign(['user_id']);
+                    $table->dropColumn('user_id');
+                });
             }
         }
 
-        Schema::table('estimates', function (Blueprint $table) {
-            if (config('database.default') !== 'sqlite') {
-                $table->dropForeign(['user_id']);
-            }
-            $table->dropColumn('user_id');
-        });
-
-        Schema::table('expenses', function (Blueprint $table) {
-            if (config('database.default') !== 'sqlite') {
-                $table->dropForeign(['user_id']);
-            }
-            $table->dropColumn('user_id');
-        });
-
-        Schema::table('invoices', function (Blueprint $table) {
-            if (config('database.default') !== 'sqlite') {
-                $table->dropForeign(['user_id']);
-            }
-            $table->dropColumn('user_id');
-        });
-
-        Schema::table('payments', function (Blueprint $table) {
-            if (config('database.default') !== 'sqlite') {
-                $table->dropForeign(['user_id']);
-            }
-            $table->dropColumn('user_id');
-        });
-
-        Schema::table('items', function (Blueprint $table) {
+        Schema::table('items', function (Blueprint $table): void {
             $table->dropColumn('unit');
         });
 
-        $users = User::where('role', 'customer')
-            ->delete();
+        User::where('role', 'customer')->delete();
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        //
+        // Migration historique non réversible.
     }
 }

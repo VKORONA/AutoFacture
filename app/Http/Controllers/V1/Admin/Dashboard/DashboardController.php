@@ -16,40 +16,31 @@ use Silber\Bouncer\BouncerFacade;
 
 class DashboardController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function __invoke(Request $request)
     {
-        $company = Company::find($request->header('company'));
-
+        $company = Company::findOrFail($request->header('company'));
         $this->authorize('view dashboard', $company);
 
-        $invoice_totals = [];
-        $expense_totals = [];
-        $receipt_totals = [];
-        $net_income_totals = [];
-
-        $i = 0;
+        $invoiceTotals = [];
+        $expenseTotals = [];
+        $receiptTotals = [];
+        $netIncomeTotals = [];
         $months = [];
-        $monthCounter = 0;
-        $fiscalYear = CompanySetting::getSetting('fiscal_year', $request->header('company'));
+
+        $fiscalYear = CompanySetting::getSetting('fiscal_year', $company->id) ?: '1-12';
+        $fiscalStartMonth = (int) explode('-', $fiscalYear)[0];
         $startDate = Carbon::now();
         $start = Carbon::now();
         $end = Carbon::now();
-        $terms = explode('-', $fiscalYear);
 
-        if ($terms[0] <= $start->month) {
-            $startDate->month($terms[0])->startOfMonth();
-            $start->month($terms[0])->startOfMonth();
-            $end->month($terms[0])->endOfMonth();
+        if ($fiscalStartMonth <= $start->month) {
+            $startDate->month($fiscalStartMonth)->startOfMonth();
+            $start->month($fiscalStartMonth)->startOfMonth();
+            $end->month($fiscalStartMonth)->endOfMonth();
         } else {
-            $startDate->subYear()->month($terms[0])->startOfMonth();
-            $start->subYear()->month($terms[0])->startOfMonth();
-            $end->subYear()->month($terms[0])->endOfMonth();
+            $startDate->subYear()->month($fiscalStartMonth)->startOfMonth();
+            $start->subYear()->month($fiscalStartMonth)->startOfMonth();
+            $end->subYear()->month($fiscalStartMonth)->endOfMonth();
         }
 
         if ($request->has('previous_year')) {
@@ -58,109 +49,54 @@ class DashboardController extends Controller
             $end->subYear()->endOfMonth();
         }
 
-        while ($monthCounter < 12) {
-            array_push(
-                $invoice_totals,
-                Invoice::whereBetween(
-                    'invoice_date',
-                    [$start->format('Y-m-d'), $end->format('Y-m-d')]
-                )
-                ->whereCompany()
-                ->sum('base_total')
-            );
-            array_push(
-                $expense_totals,
-                Expense::whereBetween(
-                    'expense_date',
-                    [$start->format('Y-m-d'), $end->format('Y-m-d')]
-                )
-                ->whereCompany()
-                ->sum('base_amount')
-            );
-            array_push(
-                $receipt_totals,
-                Payment::whereBetween(
-                    'payment_date',
-                    [$start->format('Y-m-d'), $end->format('Y-m-d')]
-                )
-                ->whereCompany()
-                ->sum('base_amount')
-            );
-            array_push(
-                $net_income_totals,
-                ($receipt_totals[$i] - $expense_totals[$i])
-            );
-            $i++;
-            array_push($months, $start->format('M'));
-            $monthCounter++;
-            $end->startOfMonth();
+        for ($monthCounter = 0; $monthCounter < 12; $monthCounter++) {
+            $range = [$start->format('Y-m-d'), $end->format('Y-m-d')];
+            $invoiceTotal = Invoice::whereBetween('invoice_date', $range)->sum('base_total');
+            $expenseTotal = Expense::whereBetween('expense_date', $range)->sum('base_amount');
+            $receiptTotal = Payment::whereBetween('payment_date', $range)->sum('base_amount');
+
+            $invoiceTotals[] = $invoiceTotal;
+            $expenseTotals[] = $expenseTotal;
+            $receiptTotals[] = $receiptTotal;
+            $netIncomeTotals[] = $receiptTotal - $expenseTotal;
+            $months[] = $start->format('M');
+
             $start->addMonth()->startOfMonth();
             $end->addMonth()->endOfMonth();
         }
 
-        $start->subMonth()->endOfMonth();
+        $periodEnd = $start->copy()->subMonth()->endOfMonth();
+        $period = [$startDate->format('Y-m-d'), $periodEnd->format('Y-m-d')];
 
-        $total_sales = Invoice::whereBetween(
-            'invoice_date',
-            [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
-        )
-            ->whereCompany()
-            ->sum('base_total');
+        $totalSales = Invoice::whereBetween('invoice_date', $period)->sum('base_total');
+        $totalReceipts = Payment::whereBetween('payment_date', $period)->sum('base_amount');
+        $totalExpenses = Expense::whereBetween('expense_date', $period)->sum('base_amount');
 
-        $total_receipts = Payment::whereBetween(
-            'payment_date',
-            [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
-        )
-            ->whereCompany()
-            ->sum('base_amount');
-
-        $total_expenses = Expense::whereBetween(
-            'expense_date',
-            [$startDate->format('Y-m-d'), $start->format('Y-m-d')]
-        )
-            ->whereCompany()
-            ->sum('base_amount');
-
-        $total_net_income = (int)$total_receipts - (int)$total_expenses;
-
-        $chart_data = [
-            'months' => $months,
-            'invoice_totals' => $invoice_totals,
-            'expense_totals' => $expense_totals,
-            'receipt_totals' => $receipt_totals,
-            'net_income_totals' => $net_income_totals,
-        ];
-
-        $total_customer_count = Customer::whereCompany()->count();
-        $total_invoice_count = Invoice::whereCompany()
-            ->count();
-        $total_estimate_count = Estimate::whereCompany()->count();
-        $total_amount_due = Invoice::whereCompany()
-            ->sum('base_due_amount');
-
-        $recent_due_invoices = Invoice::with('customer')
-            ->whereCompany()
+        $recentDueInvoices = Invoice::with('customer')
             ->where('base_due_amount', '>', 0)
             ->take(5)
             ->latest()
             ->get();
-        $recent_estimates = Estimate::with('customer')->whereCompany()->take(5)->latest()->get();
+        $recentEstimates = Estimate::with('customer')->take(5)->latest()->get();
 
         return response()->json([
-            'total_amount_due' => $total_amount_due,
-            'total_customer_count' => $total_customer_count,
-            'total_invoice_count' => $total_invoice_count,
-            'total_estimate_count' => $total_estimate_count,
-
-            'recent_due_invoices' => BouncerFacade::can('view-invoice', Invoice::class) ? $recent_due_invoices : [],
-            'recent_estimates' => BouncerFacade::can('view-estimate', Estimate::class) ? $recent_estimates : [],
-
-            'chart_data' => $chart_data,
-
-            'total_sales' => $total_sales,
-            'total_receipts' => $total_receipts,
-            'total_expenses' => $total_expenses,
-            'total_net_income' => $total_net_income,
+            'total_amount_due' => Invoice::sum('base_due_amount'),
+            'total_customer_count' => Customer::count(),
+            'total_invoice_count' => Invoice::count(),
+            'total_estimate_count' => Estimate::count(),
+            'recent_due_invoices' => BouncerFacade::can('view-invoice', Invoice::class) ? $recentDueInvoices : [],
+            'recent_estimates' => BouncerFacade::can('view-estimate', Estimate::class) ? $recentEstimates : [],
+            'chart_data' => [
+                'months' => $months,
+                'invoice_totals' => $invoiceTotals,
+                'expense_totals' => $expenseTotals,
+                'receipt_totals' => $receiptTotals,
+                'net_income_totals' => $netIncomeTotals,
+            ],
+            'total_sales' => $totalSales,
+            'total_receipts' => $totalReceipts,
+            'total_expenses' => $totalExpenses,
+            'total_net_income' => (int) $totalReceipts - (int) $totalExpenses,
         ]);
     }
 }

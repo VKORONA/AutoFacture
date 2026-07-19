@@ -2,35 +2,41 @@
 
 namespace Crater\Http\Controllers\V1\Admin\Invoice;
 
+use Crater\Domain\Invoicing\InvoiceFinalizer;
 use Crater\Http\Controllers\Controller;
 use Crater\Models\Invoice;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ChangeInvoiceStatusController extends Controller
 {
-    /**
-    * Handle the incoming request.
-    *
-    * @param  \Illuminate\Http\Request  $request
-    * @return \Illuminate\Http\JsonResponse
-    */
-    public function __invoke(Request $request, Invoice $invoice)
+    public function __invoke(Request $request, Invoice $invoice, InvoiceFinalizer $finalizer)
     {
         $this->authorize('send invoice', $invoice);
 
-        if ($request->status == Invoice::STATUS_SENT) {
-            $invoice->status = Invoice::STATUS_SENT;
-            $invoice->sent = true;
-            $invoice->save();
-        } elseif ($request->status == Invoice::STATUS_COMPLETED) {
-            $invoice->status = Invoice::STATUS_COMPLETED;
-            $invoice->paid_status = Invoice::STATUS_PAID;
-            $invoice->due_amount = 0;
-            $invoice->save();
+        $validated = $request->validate([
+            'status' => ['required', Rule::in([
+                Invoice::STATUS_SENT,
+                Invoice::STATUS_COMPLETED,
+            ])],
+        ]);
+
+        $invoice = $finalizer->finalize($invoice, $request->user());
+
+        if ($validated['status'] === Invoice::STATUS_COMPLETED) {
+            $invoice->forceFill([
+                'status' => Invoice::STATUS_COMPLETED,
+                'paid_status' => Invoice::STATUS_PAID,
+                'due_amount' => 0,
+                'base_due_amount' => 0,
+                'overdue' => false,
+            ])->save();
         }
 
         return response()->json([
             'success' => true,
+            'finalized_at' => $invoice->finalized_at,
+            'immutable_hash' => $invoice->immutable_hash,
         ]);
     }
 }

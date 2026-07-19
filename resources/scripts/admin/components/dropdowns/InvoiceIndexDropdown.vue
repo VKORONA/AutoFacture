@@ -1,4 +1,9 @@
 <template>
+  <CreateCreditNoteModal
+    v-if="route.name === 'invoices.view'"
+    @created="onCreditNoteCreated"
+  />
+
   <BaseDropdown>
     <template #activator>
       <BaseButton v-if="route.name === 'invoices.view'" variant="primary">
@@ -7,7 +12,6 @@
       <BaseIcon v-else name="DotsHorizontalIcon" class="h-5 text-gray-500" />
     </template>
 
-    <!-- Edit Invoice  -->
     <router-link
       v-if="userStore.hasAbilities(abilities.EDIT_INVOICE)"
       :to="`/admin/invoices/${row.id}/edit`"
@@ -21,7 +25,6 @@
       </BaseDropdownItem>
     </router-link>
 
-    <!-- Copy PDF url  -->
     <BaseDropdownItem v-if="route.name === 'invoices.view'" @click="copyPdfUrl">
       <BaseIcon
         name="LinkIcon"
@@ -30,7 +33,6 @@
       {{ $t('general.copy_pdf_url') }}
     </BaseDropdownItem>
 
-    <!-- View Invoice  -->
     <router-link
       v-if="
         route.name !== 'invoices.view' &&
@@ -47,7 +49,17 @@
       </BaseDropdownItem>
     </router-link>
 
-    <!-- Send Invoice Mail  -->
+    <BaseDropdownItem
+      v-if="canCreateCreditNote(row)"
+      @click="openCreditNoteModal(row)"
+    >
+      <BaseIcon
+        name="DocumentDuplicateIcon"
+        class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500"
+      />
+      Créer un avoir
+    </BaseDropdownItem>
+
     <BaseDropdownItem v-if="canSendInvoice(row)" @click="sendInvoice(row)">
       <BaseIcon
         name="PaperAirplaneIcon"
@@ -56,7 +68,6 @@
       {{ $t('invoices.send_invoice') }}
     </BaseDropdownItem>
 
-    <!-- Resend Invoice -->
     <BaseDropdownItem v-if="canReSendInvoice(row)" @click="sendInvoice(row)">
       <BaseIcon
         name="PaperAirplaneIcon"
@@ -65,10 +76,13 @@
       {{ $t('invoices.resend_invoice') }}
     </BaseDropdownItem>
 
-    <!-- Record payment  -->
     <router-link :to="`/admin/payments/${row.id}/create`">
       <BaseDropdownItem
-        v-if="row.status == 'SENT' && route.name !== 'invoices.view'"
+        v-if="
+          row.status === 'SENT' &&
+          row.due_amount > 0 &&
+          route.name !== 'invoices.view'
+        "
       >
         <BaseIcon
           name="CreditCardIcon"
@@ -78,7 +92,6 @@
       </BaseDropdownItem>
     </router-link>
 
-    <!-- Mark as sent Invoice -->
     <BaseDropdownItem v-if="canSendInvoice(row)" @click="onMarkAsSent(row.id)">
       <BaseIcon
         name="CheckCircleIcon"
@@ -87,7 +100,6 @@
       {{ $t('invoices.mark_as_sent') }}
     </BaseDropdownItem>
 
-    <!-- Clone Invoice into new invoice  -->
     <BaseDropdownItem
       v-if="userStore.hasAbilities(abilities.CREATE_INVOICE)"
       @click="cloneInvoiceData(row)"
@@ -99,9 +111,10 @@
       {{ $t('invoices.clone_invoice') }}
     </BaseDropdownItem>
 
-    <!--  Delete Invoice  -->
     <BaseDropdownItem
-      v-if="userStore.hasAbilities(abilities.DELETE_INVOICE)"
+      v-if="
+        !row.is_finalized && userStore.hasAbilities(abilities.DELETE_INVOICE)
+      "
       @click="removeInvoice(row.id)"
     >
       <BaseIcon
@@ -114,15 +127,17 @@
 </template>
 
 <script setup>
-import { useInvoiceStore } from '@/scripts/admin/stores/invoice'
-import { useNotificationStore } from '@/scripts/stores/notification'
-import { useDialogStore } from '@/scripts/stores/dialog'
-import { useModalStore } from '@/scripts/stores/modal'
+import { inject } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+
+import CreateCreditNoteModal from '@/scripts/admin/components/modal-components/CreateCreditNoteModal.vue'
+import { useInvoiceStore } from '@/scripts/admin/stores/invoice'
 import { useUserStore } from '@/scripts/admin/stores/user'
-import { inject } from 'vue'
 import abilities from '@/scripts/admin/stub/abilities'
+import { useDialogStore } from '@/scripts/stores/dialog'
+import { useModalStore } from '@/scripts/stores/modal'
+import { useNotificationStore } from '@/scripts/stores/notification'
 
 const props = defineProps({
   row: {
@@ -150,19 +165,42 @@ const route = useRoute()
 const router = useRouter()
 const utils = inject('utils')
 
+function canCreateCreditNote(row) {
+  return (
+    route.name === 'invoices.view' &&
+    row.status !== 'DRAFT' &&
+    Number(row.creditable_amount || 0) > 0 &&
+    userStore.hasAbilities(abilities.CREATE_INVOICE)
+  )
+}
+
 function canReSendInvoice(row) {
   return (
-    (row.status == 'SENT' || row.status == 'VIEWED') &&
+    (row.status === 'SENT' || row.status === 'VIEWED') &&
     userStore.hasAbilities(abilities.SEND_INVOICE)
   )
 }
 
 function canSendInvoice(row) {
   return (
-    row.status == 'DRAFT' &&
+    row.status === 'DRAFT' &&
     route.name !== 'invoices.view' &&
     userStore.hasAbilities(abilities.SEND_INVOICE)
   )
+}
+
+function openCreditNoteModal(invoice) {
+  modalStore.openModal({
+    title: 'Créer un avoir',
+    componentName: 'CreateCreditNoteModal',
+    id: invoice.id,
+    data: invoice,
+    variant: 'md',
+  })
+}
+
+function onCreditNoteCreated(creditNote) {
+  router.push(`/admin/credit-notes/${creditNote.id}/view`)
 }
 
 async function removeInvoice(id) {
@@ -177,10 +215,9 @@ async function removeInvoice(id) {
       size: 'lg',
     })
     .then((res) => {
-      id = id
       if (res) {
-        invoiceStore.deleteInvoice({ ids: [id] }).then((res) => {
-          if (res.data.success) {
+        invoiceStore.deleteInvoice({ ids: [id] }).then((response) => {
+          if (response.data.success) {
             router.push('/admin/invoices')
             props.table && props.table.refresh()
 
@@ -207,8 +244,8 @@ async function cloneInvoiceData(data) {
     })
     .then((res) => {
       if (res) {
-        invoiceStore.cloneInvoice(data).then((res) => {
-          router.push(`/admin/invoices/${res.data.data.id}/edit`)
+        invoiceStore.cloneInvoice(data).then((response) => {
+          router.push(`/admin/invoices/${response.data.data.id}/edit`)
         })
       }
     })
@@ -226,12 +263,8 @@ async function onMarkAsSent(id) {
       size: 'lg',
     })
     .then((response) => {
-      const data = {
-        id: id,
-        status: 'SENT',
-      }
       if (response) {
-        invoiceStore.markAsSent(data).then((response) => {
+        invoiceStore.markAsSent({ id, status: 'SENT' }).then(() => {
           props.table && props.table.refresh()
         })
       }
@@ -249,7 +282,7 @@ async function sendInvoice(invoice) {
 }
 
 function copyPdfUrl() {
-  let pdfUrl = `${window.location.origin}/invoices/pdf/${props.row.unique_hash}`
+  const pdfUrl = `${window.location.origin}/invoices/pdf/${props.row.unique_hash}`
 
   utils.copyTextToClipboard(pdfUrl)
 
