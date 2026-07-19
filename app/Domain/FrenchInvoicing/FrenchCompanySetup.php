@@ -5,6 +5,7 @@ namespace Crater\Domain\FrenchInvoicing;
 use Crater\Models\Company;
 use Crater\Models\CompanySetting;
 use Crater\Models\TaxType;
+use Illuminate\Validation\ValidationException;
 
 final class FrenchCompanySetup
 {
@@ -53,6 +54,19 @@ final class FrenchCompanySetup
             'missing_fields' => $missing,
             'vat_regime' => $company->vat_regime,
         ];
+    }
+
+    public function assertComplete(Company $company): void
+    {
+        $status = $this->status($company);
+
+        if ($status['complete']) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'company_setup' => 'Complétez d’abord votre entreprise : '.implode(', ', $status['missing_fields']).'.',
+        ]);
     }
 
     public function synchronizeVatDefaults(Company $company): void
