@@ -4,6 +4,7 @@ namespace Crater\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ElectronicInvoiceConnection extends Model
 {
@@ -21,6 +22,7 @@ class ElectronicInvoiceConnection extends Model
     protected function casts(): array
     {
         return [
+            'setup_step' => 'integer',
             'account_created_at' => 'datetime',
             'company_verified_at' => 'datetime',
             'credentials_configured_at' => 'datetime',
@@ -35,7 +37,7 @@ class ElectronicInvoiceConnection extends Model
         ];
     }
 
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
