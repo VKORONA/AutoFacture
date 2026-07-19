@@ -42,6 +42,15 @@ class AccountingSetting extends Model
         return self::firstOrCreate(
             ['company_id' => $companyId],
             [
+                'accounting_mode' => self::MODE_ACCRUAL,
+                'export_profile' => self::PROFILE_UNIVERSAL,
+                'sales_journal_code' => 'VT',
+                'bank_journal_code' => 'BQ',
+                'customer_control_account' => '411000',
+                'sales_services_account' => '706000',
+                'sales_goods_account' => '707000',
+                'bank_account' => '512000',
+                'rounding_account' => '658000',
                 'vat_accounts' => [
                     '20' => '445712',
                     '10' => '445711',
@@ -49,6 +58,9 @@ class AccountingSetting extends Model
                     '2.1' => '445713',
                     '0' => null,
                 ],
+                'include_payments' => true,
+                'include_documents' => true,
+                'include_commercial_annexes' => false,
             ],
         );
     }
