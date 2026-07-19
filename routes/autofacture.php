@@ -1,5 +1,6 @@
 <?php
 
+use Crater\Http\Controllers\V1\Admin\Accounting\AccountingController;
 use Crater\Http\Controllers\V1\Admin\CreditNote\CreditNotesController;
 use Crater\Http\Controllers\V1\Admin\ElectronicInvoicing\ElectronicInvoiceConnectionController;
 use Crater\Http\Controllers\V1\Admin\Estimate\EstimateAssetController;
@@ -30,6 +31,17 @@ Route::prefix('v1')
                 ->name('estimate-assets.attachments.store');
             Route::delete('/attachments/{attachment}', [EstimateAssetController::class, 'destroyAttachment'])
                 ->name('estimate-assets.attachments.destroy');
+        });
+
+        Route::prefix('accounting')->group(function (): void {
+            Route::get('/', [AccountingController::class, 'show'])
+                ->name('accounting.show');
+            Route::put('/settings', [AccountingController::class, 'updateSettings'])
+                ->name('accounting.settings.update');
+            Route::post('/exports', [AccountingController::class, 'generate'])
+                ->name('accounting.exports.generate');
+            Route::get('/exports/{batch}/download', [AccountingController::class, 'download'])
+                ->name('accounting.exports.download');
         });
 
         Route::prefix('electronic-invoicing')->group(function (): void {

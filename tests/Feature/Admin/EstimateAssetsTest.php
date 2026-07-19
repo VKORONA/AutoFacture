@@ -47,7 +47,7 @@ function estimateWithAssetIdentity(string $lineUuid, string $draftToken, array $
     );
 }
 
-it('normalizes a line photo to stable 4 by 3 variants', function () {
+it('normalizes a line photo to optimized web and PDF variants', function () {
     $lineUuid = (string) Str::uuid();
     $draftToken = (string) Str::uuid();
 
@@ -66,17 +66,45 @@ it('normalizes a line photo to stable 4 by 3 variants', function () {
     Storage::disk('local')->assertExists($photo->image_path);
     Storage::disk('local')->assertExists($photo->preview_path);
     Storage::disk('local')->assertExists($photo->thumbnail_path);
+    Storage::disk('local')->assertExists($photo->pdf_path);
 
     $imageSize = getimagesizefromstring(Storage::disk('local')->get($photo->image_path));
     $previewSize = getimagesizefromstring(Storage::disk('local')->get($photo->preview_path));
     $thumbnailSize = getimagesizefromstring(Storage::disk('local')->get($photo->thumbnail_path));
+    $pdfSize = getimagesizefromstring(Storage::disk('local')->get($photo->pdf_path));
 
     expect($imageSize[0])->toBe(1600)
         ->and($imageSize[1])->toBe(1200)
         ->and($previewSize[0])->toBe(800)
         ->and($previewSize[1])->toBe(600)
-        ->and($thumbnailSize[0])->toBe(240)
-        ->and($thumbnailSize[1])->toBe(180);
+        ->and($thumbnailSize[0])->toBe(320)
+        ->and($thumbnailSize[1])->toBe(240)
+        ->and($pdfSize[0])->toBe(1600)
+        ->and($pdfSize[1])->toBe(1200)
+        ->and($photo->checksum_sha256)->toHaveLength(64)
+        ->and($photo->web_size_bytes)->toBeGreaterThan(0)
+        ->and($photo->pdf_size_bytes)->toBeGreaterThan(0)
+        ->and(pathinfo($photo->pdf_path, PATHINFO_EXTENSION))->toBe('jpg');
+});
+
+it('refuses the same optimized photo twice on one line', function () {
+    $lineUuid = (string) Str::uuid();
+    $draftToken = (string) Str::uuid();
+    $file = UploadedFile::fake()->image('doublon.jpg', 800, 600);
+
+    post('/api/v1/estimate-assets/photos', [
+        'photo' => $file,
+        'line_uuid' => $lineUuid,
+        'draft_token' => $draftToken,
+    ])->assertCreated();
+
+    post('/api/v1/estimate-assets/photos', [
+        'photo' => UploadedFile::fake()->image('doublon.jpg', 800, 600),
+        'line_uuid' => $lineUuid,
+        'draft_token' => $draftToken,
+    ])->assertStatus(422);
+
+    expect(EstimateLinePhoto::count())->toBe(1);
 });
 
 it('limits each estimate line to four photos', function () {
@@ -85,14 +113,14 @@ it('limits each estimate line to four photos', function () {
 
     foreach (range(1, 4) as $index) {
         post('/api/v1/estimate-assets/photos', [
-            'photo' => UploadedFile::fake()->image("photo-{$index}.jpg", 800, 600),
+            'photo' => UploadedFile::fake()->image("photo-{$index}.jpg", 800 + $index, 600),
             'line_uuid' => $lineUuid,
             'draft_token' => $draftToken,
         ])->assertCreated();
     }
 
     post('/api/v1/estimate-assets/photos', [
-        'photo' => UploadedFile::fake()->image('photo-5.jpg', 800, 600),
+        'photo' => UploadedFile::fake()->image('photo-5.jpg', 900, 600),
         'line_uuid' => $lineUuid,
         'draft_token' => $draftToken,
     ])->assertStatus(422);
@@ -141,7 +169,7 @@ it('claims draft photos and annex attachments when the estimate is saved', funct
 });
 
 it('refuses executable files as estimate annexes', function () {
-    post('/api/v1/estimate-assets/attachments', [
+    postJson('/api/v1/estimate-assets/attachments', [
         'attachment' => UploadedFile::fake()->create('programme.exe', 10, 'application/x-msdownload'),
         'draft_token' => (string) Str::uuid(),
     ])->assertStatus(422);
@@ -149,7 +177,7 @@ it('refuses executable files as estimate annexes', function () {
     expect(EstimateAttachment::count())->toBe(0);
 });
 
-it('removes stored assets when estimates are deleted', function () {
+it('removes every optimized derivative when estimates are deleted', function () {
     $estimate = Estimate::factory()->hasItems(1)->create();
     $lineUuid = $estimate->items()->firstOrFail()->line_uuid;
 
@@ -168,5 +196,6 @@ it('removes stored assets when estimates are deleted', function () {
     Storage::disk('local')->assertMissing($photo->image_path);
     Storage::disk('local')->assertMissing($photo->preview_path);
     Storage::disk('local')->assertMissing($photo->thumbnail_path);
+    Storage::disk('local')->assertMissing($photo->pdf_path);
     expect(EstimateLinePhoto::count())->toBe(0);
 });

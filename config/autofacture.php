@@ -10,6 +10,7 @@ return [
         'estimates' => env('FEATURE_ESTIMATES', true),
         'invoices' => env('FEATURE_INVOICES', true),
         'electronic_invoicing' => env('FEATURE_ELECTRONIC_INVOICING', true),
+        'accounting' => env('FEATURE_ACCOUNTING', true),
         'payments' => env('FEATURE_PAYMENTS', true),
         'users' => env('FEATURE_USERS', true),
         'settings' => env('FEATURE_SETTINGS', true),
@@ -59,6 +60,16 @@ return [
             'ability' => 'view-invoice',
             'model' => Invoice::class,
         ],
+        [
+            'title' => 'Comptabilité',
+            'group' => 3,
+            'link' => '/admin/accounting',
+            'icon' => 'CalculatorIcon',
+            'name' => 'Accounting',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => Invoice::class,
+        ],
     ],
 
     'main_menu_map' => [
@@ -69,6 +80,7 @@ return [
         'Invoices' => 'invoices',
         'Credit Notes' => 'invoices',
         'Electronic Invoicing' => 'electronic_invoicing',
+        'Accounting' => 'accounting',
         'Recurring Invoices' => 'recurring_invoices',
         'Payments' => 'payments',
         'Expenses' => 'expenses',
@@ -107,6 +119,10 @@ return [
         'electronic_invoicing' => [
             'admin/electronic-invoicing*',
             'api/v1/electronic-invoicing*',
+        ],
+        'accounting' => [
+            'admin/accounting*',
+            'api/v1/accounting*',
         ],
         'recurring_invoices' => [
             'admin/recurring-invoices*',

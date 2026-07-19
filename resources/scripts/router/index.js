@@ -11,8 +11,9 @@ import CustomerRoutes from '@/scripts/customer/customer-router'
 const LayoutBasic = () => import('@/scripts/admin/layouts/LayoutBasic.vue')
 const ElectronicInvoicing = () =>
   import('@/scripts/admin/views/electronic-invoicing/Index.vue')
+const Accounting = () => import('@/scripts/admin/views/accounting/Index.vue')
 
-const ElectronicInvoicingRoutes = [
+const AdditionalAdminRoutes = [
   {
     path: '/admin/electronic-invoicing',
     component: LayoutBasic,
@@ -29,14 +30,26 @@ const ElectronicInvoicingRoutes = [
       },
     ],
   },
+  {
+    path: '/admin/accounting',
+    component: LayoutBasic,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'accounting.index',
+        meta: {
+          requiresAuth: true,
+          ability: abilities.VIEW_INVOICE,
+        },
+        component: Accounting,
+      },
+    ],
+  },
 ]
 
 let routes = []
-routes = routes.concat(
-  ElectronicInvoicingRoutes,
-  AdminRoutes,
-  CustomerRoutes
-)
+routes = routes.concat(AdditionalAdminRoutes, AdminRoutes, CustomerRoutes)
 
 const router = createRouter({
   history: createWebHistory(),
