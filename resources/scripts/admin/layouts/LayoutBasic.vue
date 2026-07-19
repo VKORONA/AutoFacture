@@ -1,17 +1,13 @@
 <template>
-  <div v-if="isAppLoaded" class="h-full">
+  <div v-if="isAppLoaded" class="premium-app-shell">
     <NotificationRoot />
 
     <SiteHeader />
-
     <SiteSidebar />
-
     <ExchangeRateBulkUpdateModal />
 
-    <main
-      class="h-screen h-screen-ios overflow-y-auto md:pl-56 xl:pl-64 min-h-0"
-    >
-      <div class="pt-16 pb-16">
+    <main class="premium-main">
+      <div class="premium-route-view">
         <router-view />
       </div>
     </main>
@@ -21,7 +17,6 @@
 </template>
 
 <script setup>
-import { useI18n } from 'vue-i18n'
 import { useGlobalStore } from '@/scripts/admin/stores/global'
 import { onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -40,7 +35,6 @@ const route = useRoute()
 const userStore = useUserStore()
 const router = useRouter()
 const modalStore = useModalStore()
-const { t } = useI18n()
 const exchangeRateStore = useExchangeRateStore()
 const companyStore = useCompanyStore()
 
@@ -89,3 +83,33 @@ onMounted(() => {
   })
 })
 </script>
+
+<style scoped>
+.premium-app-shell {
+  min-height: 100vh;
+  color: #0f172a;
+  background: #f4f7fb;
+}
+
+.premium-main {
+  min-height: 100vh;
+  padding-top: 76px;
+  padding-left: 272px;
+  overflow-x: hidden;
+}
+
+.premium-route-view {
+  min-height: calc(100vh - 76px);
+}
+
+@media (max-width: 767px) {
+  .premium-main {
+    padding-top: 66px;
+    padding-left: 0;
+  }
+
+  .premium-route-view {
+    min-height: calc(100vh - 66px);
+  }
+}
+</style>
