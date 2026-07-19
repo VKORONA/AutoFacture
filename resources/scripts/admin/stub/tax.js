@@ -19,7 +19,7 @@ function defaultTax() {
       tax_type_id: taxTypeId,
       percent,
     }
-  } catch (error) {
+  } catch {
     return {
       name: '',
       tax_type_id: 0,
