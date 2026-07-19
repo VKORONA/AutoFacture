@@ -9,18 +9,17 @@ use Illuminate\Database\Seeder;
 
 class DemoSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
     public function run()
     {
-        $user = User::whereIs('super admin')->first();
+        $user = User::whereIs('super admin')->firstOrFail();
+        $user->setSettings(['language' => 'fr']);
 
-        $user->setSettings(['language' => 'en']);
+        $company = $user->companies()->firstOrFail();
 
-        Address::create(['company_id' => $user->companies()->first()->id, 'country_id' => 1]);
+        Address::query()->updateOrCreate(
+            ['company_id' => $company->id],
+            ['country_id' => 1]
+        );
 
         Setting::setSetting('profile_complete', 'COMPLETED');
 
