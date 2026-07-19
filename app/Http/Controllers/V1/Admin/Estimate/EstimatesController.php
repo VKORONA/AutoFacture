@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Controllers\V1\Admin\Estimate;
 
+use Crater\Domain\Estimates\EstimateAssetService;
 use Crater\Domain\FrenchInvoicing\FrenchCompanySetup;
 use Crater\Http\Controllers\Controller;
 use Crater\Http\Requests\DeleteEstimatesRequest;
@@ -34,16 +35,26 @@ class EstimatesController extends Controller
             ]]);
     }
 
-    public function store(EstimatesRequest $request, FrenchCompanySetup $companySetup)
-    {
+    public function store(
+        EstimatesRequest $request,
+        FrenchCompanySetup $companySetup,
+        EstimateAssetService $assets,
+    ) {
         $this->authorize('create', Estimate::class);
 
         $company = Company::findOrFail((int) $request->header('company'));
         $companySetup->assertComplete($company);
 
-        $estimate = DB::transaction(
-            fn (): Estimate => Estimate::createEstimate($request)
-        );
+        $estimate = DB::transaction(function () use ($request, $assets): Estimate {
+            $estimate = Estimate::createEstimate($request);
+            $assets->claimDraftAssets(
+                $estimate,
+                (string) $request->validated('asset_draft_token'),
+                (int) $request->user()->id,
+            );
+
+            return $estimate;
+        });
 
         if ($request->has('estimateSend')) {
             $estimate->send($request->title, $request->body);
@@ -55,7 +66,6 @@ class EstimatesController extends Controller
         $resource = new EstimateResource($estimate);
 
         return $resource->additional([
-            // Compatibilité avec le store Vue historique qui lisait response.data.estimate.
             'estimate' => $resource->resolve($request),
         ]);
     }
@@ -67,13 +77,24 @@ class EstimatesController extends Controller
         return new EstimateResource($estimate);
     }
 
-    public function update(EstimatesRequest $request, Estimate $estimate)
-    {
+    public function update(
+        EstimatesRequest $request,
+        Estimate $estimate,
+        EstimateAssetService $assets,
+    ) {
         $this->authorize('update', $estimate);
 
-        $estimate = DB::transaction(
-            fn (): Estimate => $estimate->updateEstimate($request)
-        );
+        $estimate = DB::transaction(function () use ($request, $estimate, $assets): Estimate {
+            $updatedEstimate = $estimate->updateEstimate($request);
+            $assets->claimDraftAssets(
+                $updatedEstimate,
+                (string) $request->validated('asset_draft_token'),
+                (int) $request->user()->id,
+            );
+            $assets->removePhotosForDeletedLines($updatedEstimate);
+
+            return $updatedEstimate;
+        });
 
         GenerateEstimatePdfJob::dispatch($estimate, true);
 
