@@ -99,6 +99,17 @@ class EstimateAssetService
         );
         $path = $file->storeAs($baseDirectory, $storedName, $disk);
 
+        abort_if($path === false, 500, 'La pièce annexe n’a pas pu être enregistrée.');
+
+        $sortOrder = EstimateAttachment::query()
+            ->where('company_id', $companyId)
+            ->when(
+                $estimate,
+                fn ($query) => $query->where('estimate_id', $estimate->id),
+                fn ($query) => $query->whereNull('estimate_id')->where('draft_token', $draftToken)->where('user_id', $userId),
+            )
+            ->max('sort_order');
+
         return EstimateAttachment::create([
             'company_id' => $companyId,
             'user_id' => $userId,
@@ -110,14 +121,7 @@ class EstimateAssetService
             'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
             'path' => $path,
             'size_bytes' => $file->getSize(),
-            'sort_order' => (int) EstimateAttachment::query()
-                ->where('company_id', $companyId)
-                ->when(
-                    $estimate,
-                    fn ($query) => $query->where('estimate_id', $estimate->id),
-                    fn ($query) => $query->whereNull('estimate_id')->where('draft_token', $draftToken)->where('user_id', $userId),
-                )
-                ->max('sort_order') + 1,
+            'sort_order' => (int) ($sortOrder ?? -1) + 1,
         ]);
     }
 
@@ -156,6 +160,19 @@ class EstimateAssetService
             ->whereNotIn('line_uuid', $validLineUuids)
             ->get()
             ->each(fn (EstimateLinePhoto $photo) => $this->deletePhoto($photo));
+    }
+
+    public function deleteAssetsForEstimate(Estimate $estimate): void
+    {
+        EstimateLinePhoto::query()
+            ->where('estimate_id', $estimate->id)
+            ->get()
+            ->each(fn (EstimateLinePhoto $photo) => $this->deletePhoto($photo));
+
+        EstimateAttachment::query()
+            ->where('estimate_id', $estimate->id)
+            ->get()
+            ->each(fn (EstimateAttachment $attachment) => $this->deleteAttachment($attachment));
     }
 
     public function deletePhoto(EstimateLinePhoto $photo): void
