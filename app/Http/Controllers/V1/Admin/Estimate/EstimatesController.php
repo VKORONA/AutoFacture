@@ -9,6 +9,7 @@ use Crater\Http\Resources\EstimateResource;
 use Crater\Jobs\GenerateEstimatePdfJob;
 use Crater\Models\Estimate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class EstimatesController extends Controller
 {
@@ -35,7 +36,9 @@ class EstimatesController extends Controller
     {
         $this->authorize('create', Estimate::class);
 
-        $estimate = Estimate::createEstimate($request);
+        $estimate = DB::transaction(
+            fn (): Estimate => Estimate::createEstimate($request)
+        );
 
         if ($request->has('estimateSend')) {
             $estimate->send($request->title, $request->body);
@@ -43,7 +46,13 @@ class EstimatesController extends Controller
 
         GenerateEstimatePdfJob::dispatch($estimate);
 
-        return new EstimateResource($estimate);
+        $estimate->load(['items.taxes', 'customer', 'taxes']);
+        $resource = new EstimateResource($estimate);
+
+        return $resource->additional([
+            // Compatibilité avec le store Vue historique qui lisait response.data.estimate.
+            'estimate' => $resource->resolve($request),
+        ]);
     }
 
     public function show(Request $request, Estimate $estimate)
@@ -57,7 +66,9 @@ class EstimatesController extends Controller
     {
         $this->authorize('update', $estimate);
 
-        $estimate = $estimate->updateEstimate($request);
+        $estimate = DB::transaction(
+            fn (): Estimate => $estimate->updateEstimate($request)
+        );
 
         GenerateEstimatePdfJob::dispatch($estimate, true);
 
