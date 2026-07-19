@@ -16,7 +16,10 @@ class CompanyRequest extends FormRequest
 
     public function rules()
     {
+        $completeSetup = $this->boolean('complete_setup');
+
         return [
+            'complete_setup' => ['sometimes', 'boolean'],
             'name' => [
                 'required',
                 'string',
@@ -26,7 +29,12 @@ class CompanyRequest extends FormRequest
             'slug' => ['nullable', 'string', 'max:255'],
             'legal_form' => ['nullable', 'string', 'max:40'],
             'siren' => ['nullable', 'regex:/^\d{9}$/', new ValidFrenchBusinessNumber(9, 'SIREN')],
-            'siret' => ['nullable', 'regex:/^\d{14}$/', new ValidFrenchBusinessNumber(14, 'SIRET')],
+            'siret' => [
+                Rule::requiredIf($completeSetup),
+                'nullable',
+                'regex:/^\d{14}$/',
+                new ValidFrenchBusinessNumber(14, 'SIRET'),
+            ],
             'vat_number' => ['nullable', 'string', 'max:20', 'regex:/^[A-Z]{2}[A-Z0-9]{2,18}$/i'],
             'ape_code' => ['nullable', 'string', 'max:8'],
             'rcs_city' => ['nullable', 'string', 'max:100'],
@@ -36,7 +44,15 @@ class CompanyRequest extends FormRequest
             'vat_regime' => ['required', Rule::in(['standard', 'franchise_base', 'exempt'])],
             'vat_exempt' => ['required', 'boolean'],
             'electronic_invoicing_email' => ['nullable', 'email', 'max:255'],
+            'address' => ['required', 'array'],
             'address.country_id' => ['required'],
+            'address.address_street_1' => [Rule::requiredIf($completeSetup), 'nullable', 'string', 'max:255'],
+            'address.address_street_2' => ['nullable', 'string', 'max:255'],
+            'address.city' => [Rule::requiredIf($completeSetup), 'nullable', 'string', 'max:100'],
+            'address.zip' => [Rule::requiredIf($completeSetup), 'nullable', 'string', 'max:20'],
+            'address.state' => ['nullable', 'string', 'max:100'],
+            'address.phone' => ['nullable', 'string', 'max:50'],
+            'address.website' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -52,10 +68,16 @@ class CompanyRequest extends FormRequest
     protected function prepareForValidation()
     {
         $vatRegime = $this->vat_regime ?: 'standard';
+        $siret = $this->digitsOnly($this->siret);
+        $siren = $this->digitsOnly($this->siren);
+
+        if (! $siren && $siret && strlen($siret) === 14) {
+            $siren = substr($siret, 0, 9);
+        }
 
         $this->merge([
-            'siren' => $this->digitsOnly($this->siren),
-            'siret' => $this->digitsOnly($this->siret),
+            'siren' => $siren,
+            'siret' => $siret,
             'vat_number' => $this->upperCompact($this->vat_number),
             'ape_code' => $this->upperCompact($this->ape_code),
             'iban' => $this->upperCompact($this->iban),
