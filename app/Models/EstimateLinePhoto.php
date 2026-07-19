@@ -52,7 +52,9 @@ class EstimateLinePhoto extends Model
 
     public function dataUri(string $variant = 'preview'): ?string
     {
-        $path = $this->variantPath($variant);
+        $path = $this->pdf_path && Storage::disk($this->disk)->exists($this->pdf_path)
+            ? $this->pdf_path
+            : $this->variantPath($variant);
 
         if (! $path || ! Storage::disk($this->disk)->exists($path)) {
             return null;
