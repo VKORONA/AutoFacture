@@ -37,7 +37,7 @@
         </span>
       </template>
 
-      <template #cell-actions="{ row }">
+      <template #cell-actions>
         <base-dropdown width-class="w-48" margin-class="mt-1">
           <template #activator>
             <div class="flex items-center justify-center">
@@ -74,7 +74,7 @@
 
     <h1 class="mt-8 mb-2">Sample Table Remote</h1>
 
-    <BaseTable :data="fetchData" :columns="columns2"> </BaseTable>
+    <BaseTable :data="fetchData" :columns="columns2" />
   </BasePage>
 </template>
 
@@ -105,53 +105,48 @@ export default {
       { name: 'Sylvester', age: 7, image: 'sylvester.jpg', status: 'Active' },
     ])
 
-    const columns = computed(() => {
-      return [
-        {
-          key: 'name',
-          label: 'Name',
-          thClass: 'extra',
-          tdClass: 'font-medium text-gray-900',
-        },
-        { key: 'age', label: 'Age' },
-        { key: 'image', label: 'Image' },
-        { key: 'status', label: 'Status' },
-        {
-          key: 'actions',
-          label: '',
-          tdClass: 'text-right text-sm font-medium',
-          sortable: false,
-        },
-      ]
-    })
+    const columns = computed(() => [
+      {
+        key: 'name',
+        label: 'Name',
+        thClass: 'extra',
+        tdClass: 'font-medium text-gray-900',
+      },
+      { key: 'age', label: 'Age' },
+      { key: 'image', label: 'Image' },
+      { key: 'status', label: 'Status' },
+      {
+        key: 'actions',
+        label: '',
+        tdClass: 'text-right text-sm font-medium',
+        sortable: false,
+      },
+    ])
 
-    const columns2 = computed(() => {
-      return [
-        {
-          key: 'name',
-          label: 'Name',
-          thClass: 'extra',
-          tdClass: 'font-medium text-gray-900',
-        },
-        { key: 'price', label: 'Price' },
-        { key: 'created_at', label: 'Created At' },
-        {
-          key: 'actions',
-          label: '',
-          tdClass: 'text-right text-sm font-medium',
-          sortable: false,
-        },
-      ]
-    })
+    const columns2 = computed(() => [
+      {
+        key: 'name',
+        label: 'Name',
+        thClass: 'extra',
+        tdClass: 'font-medium text-gray-900',
+      },
+      { key: 'price', label: 'Price' },
+      { key: 'created_at', label: 'Created At' },
+      {
+        key: 'actions',
+        label: '',
+        tdClass: 'text-right text-sm font-medium',
+        sortable: false,
+      },
+    ])
 
     async function fetchData({ page, sort }) {
-      let data = {
+      const query = {
         orderByField: sort.fieldName || 'created_at',
         orderBy: sort.order || 'desc',
         page,
       }
-
-      let response = await itemStore.fetchItems(data)
+      const response = await itemStore.fetchItems(query)
 
       return {
         data: response.data.items.data,

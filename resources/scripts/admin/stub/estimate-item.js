@@ -1,6 +1,8 @@
 export default {
   estimate_id: null,
   item_id: null,
+  line_uuid: null,
+  line_photos: [],
   name: '',
   title: '',
   description: null,

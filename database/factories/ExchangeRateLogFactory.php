@@ -9,25 +9,19 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ExchangeRateLogFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
     protected $model = ExchangeRateLog::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
     public function definition()
     {
+        $companyId = User::query()->where('role', 'super admin')->firstOrFail()
+            ->companies()->firstOrFail()->id;
+        $currencies = Currency::query()->orderBy('id')->limit(2)->pluck('id');
+
         return [
-            'company_id' => Currency::find(1)->id,
-            'base_currency_id' => User::find(1)->companies()->first()->id,
-            'currency_id' => Currency::find(4)->id,
-            'exchange_rate' => $this->faker->randomDigitNotNull
+            'company_id' => $companyId,
+            'base_currency_id' => $currencies->first(),
+            'currency_id' => $currencies->last(),
+            'exchange_rate' => $this->faker->randomFloat(4, 0.1, 10),
         ];
     }
 }

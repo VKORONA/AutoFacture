@@ -7,25 +7,17 @@ use Crater\Models\EstimateItem;
 use Crater\Models\Item;
 use Crater\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class EstimateItemFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
     protected $model = EstimateItem::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
     public function definition()
     {
         return [
             'item_id' => Item::factory(),
+            'line_uuid' => (string) Str::uuid(),
             'name' => function (array $item) {
                 return Item::find($item['item_id'])->name;
             },
@@ -40,7 +32,7 @@ class EstimateItemFactory extends Factory
             'company_id' => User::find(1)->companies()->first()->id,
             'tax' => $this->faker->randomDigitNotNull,
             'total' => function (array $item) {
-                return ($item['price'] * $item['quantity']);
+                return $item['price'] * $item['quantity'];
             },
             'discount_type' => $this->faker->randomElement(['percentage', 'fixed']),
             'discount_val' => function (array $estimate) {

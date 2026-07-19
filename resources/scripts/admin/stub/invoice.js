@@ -5,6 +5,7 @@ import taxStub from './tax'
 export default function () {
   return {
     id: null,
+    client_request_id: Guid.raw(),
     invoice_number: '',
     customer: null,
     customer_id: null,

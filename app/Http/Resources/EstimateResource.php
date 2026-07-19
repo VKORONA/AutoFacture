@@ -2,28 +2,35 @@
 
 namespace Crater\Http\Resources;
 
+use Crater\Models\EstimateAttachment;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class EstimateResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array
-     */
     public function toArray($request)
     {
+        $attachments = EstimateAttachment::query()
+            ->where('estimate_id', $this->id)
+            ->orderBy('sort_order')
+            ->get();
+
         return [
             'id' => $this->id,
             'estimate_date' => $this->estimate_date,
             'expiry_date' => $this->expiry_date,
             'estimate_number' => $this->estimate_number,
             'status' => $this->status,
+            'converted_invoice_id' => $this->converted_invoice_id,
+            'converted_at' => $this->converted_at,
+            'is_converted' => (bool) $this->converted_invoice_id,
             'reference_number' => $this->reference_number,
             'tax_per_item' => $this->tax_per_item,
             'discount_per_item' => $this->discount_per_item,
             'notes' => $this->getNotes(),
+            'annex_title' => $this->annex_title,
+            'annex_notes' => $this->annex_notes,
+            'include_photo_annex' => (bool) $this->include_photo_annex,
+            'attachments' => EstimateAttachmentResource::collection($attachments),
             'discount' => $this->discount,
             'discount_type' => $this->discount_type,
             'discount_val' => $this->discount_val,

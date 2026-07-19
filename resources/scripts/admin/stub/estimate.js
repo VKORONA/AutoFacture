@@ -5,6 +5,7 @@ import taxStub from './tax'
 export default function () {
   return {
     id: null,
+    asset_draft_token: Guid.raw(),
     customer: null,
     template_name: '',
     tax_per_item: null,
@@ -19,6 +20,10 @@ export default function () {
     total: 0,
     tax: 0,
     notes: '',
+    annex_title: '',
+    annex_notes: '',
+    include_photo_annex: true,
+    attachments: [],
     discount_type: 'fixed',
     discount_val: 0,
     reference_number: null,
@@ -27,6 +32,8 @@ export default function () {
       {
         ...estimateItemStub,
         id: Guid.raw(),
+        line_uuid: Guid.raw(),
+        line_photos: [],
         taxes: [{ ...taxStub, id: Guid.raw() }],
       },
     ],

@@ -9,41 +9,37 @@ use Crater\Models\PaymentMethod;
 use Crater\Models\User;
 use Crater\Services\SerialNumberFormatter;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class PaymentFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
     protected $model = Payment::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
     public function definition()
     {
+        $companyId = User::query()->where('role', 'super admin')->firstOrFail()
+            ->companies()->firstOrFail()->id;
+
         $sequenceNumber = (new SerialNumberFormatter())
             ->setModel(new Payment())
-            ->setCompany(User::find(1)->companies()->first()->id)
+            ->setCompany($companyId)
             ->setNextNumbers();
 
         return [
-            'company_id' => User::find(1)->companies()->first()->id,
+            'company_id' => $companyId,
             'payment_date' => $this->faker->date('Y-m-d', 'now'),
             'notes' => $this->faker->text(80),
             'amount' => $this->faker->randomDigitNotNull,
             'sequence_number' => $sequenceNumber->nextSequenceNumber,
             'customer_sequence_number' => $sequenceNumber->nextCustomerSequenceNumber,
             'payment_number' => $sequenceNumber->getNextNumber(),
-            'unique_hash' => str_random(60),
-            'payment_method_id' => PaymentMethod::find(1)->id,
+            'unique_hash' => Str::random(60),
+            'payment_method_id' => PaymentMethod::query()
+                ->where('company_id', $companyId)
+                ->valueOrFail('id'),
             'customer_id' => Customer::factory(),
             'base_amount' => $this->faker->randomDigitNotNull,
-            'currency_id' => Currency::find(1)->id,
+            'currency_id' => Currency::query()->valueOrFail('id'),
         ];
     }
 }

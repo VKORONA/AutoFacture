@@ -2,20 +2,22 @@
 
 namespace Crater\Http\Resources;
 
+use Crater\Models\EstimateLinePhoto;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class EstimateItemResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array
-     */
     public function toArray($request)
     {
+        $photos = EstimateLinePhoto::query()
+            ->where('estimate_id', $this->estimate_id)
+            ->where('line_uuid', $this->line_uuid)
+            ->orderBy('sort_order')
+            ->get();
+
         return [
             'id' => $this->id,
+            'line_uuid' => $this->line_uuid,
             'name' => $this->name,
             'description' => $this->description,
             'discount_type' => $this->discount_type,
@@ -34,6 +36,7 @@ class EstimateItemResource extends JsonResource
             'base_price' => $this->base_price,
             'base_tax' => $this->base_tax,
             'base_total' => $this->base_total,
+            'line_photos' => EstimateLinePhotoResource::collection($photos),
             'taxes' => $this->when($this->taxes()->exists(), function () {
                 return TaxResource::collection($this->taxes);
             }),

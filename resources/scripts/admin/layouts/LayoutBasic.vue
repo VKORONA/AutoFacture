@@ -1,17 +1,13 @@
 <template>
-  <div v-if="isAppLoaded" class="h-full">
+  <div v-if="isAppLoaded" class="premium-app-shell">
     <NotificationRoot />
 
     <SiteHeader />
-
     <SiteSidebar />
-
     <ExchangeRateBulkUpdateModal />
 
-    <main
-      class="h-screen h-screen-ios overflow-y-auto md:pl-56 xl:pl-64 min-h-0"
-    >
-      <div class="pt-16 pb-16">
+    <main class="premium-main">
+      <div class="premium-route-view">
         <router-view />
       </div>
     </main>
@@ -21,7 +17,6 @@
 </template>
 
 <script setup>
-import { useI18n } from 'vue-i18n'
 import { useGlobalStore } from '@/scripts/admin/stores/global'
 import { onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -40,16 +35,25 @@ const route = useRoute()
 const userStore = useUserStore()
 const router = useRouter()
 const modalStore = useModalStore()
-const { t } = useI18n()
 const exchangeRateStore = useExchangeRateStore()
 const companyStore = useCompanyStore()
 
-const isAppLoaded = computed(() => {
-  return globalStore.isAppLoaded
-})
+const isAppLoaded = computed(() => globalStore.isAppLoaded)
 
 onMounted(() => {
   globalStore.bootstrap().then((res) => {
+    const companySetup = res.data.company_setup
+
+    if (companySetup && !companySetup.complete) {
+      if (route.name !== 'company.info') {
+        router.replace({
+          name: 'company.info',
+          query: { setup: 'required' },
+        })
+      }
+      return
+    }
+
     if (route.meta.ability && !userStore.hasAbilities(route.meta.ability)) {
       router.push({ name: 'account.settings' })
     } else if (route.meta.isOwner && !userStore.currentUser.is_owner) {
@@ -59,20 +63,19 @@ onMounted(() => {
     if (
       res.data.current_company_settings.bulk_exchange_rate_configured === 'NO'
     ) {
-      exchangeRateStore.fetchBulkCurrencies().then((res) => {
-        if (res.data.currencies.length) {
+      exchangeRateStore.fetchBulkCurrencies().then((response) => {
+        if (response.data.currencies.length) {
           modalStore.openModal({
             componentName: 'ExchangeRateBulkUpdateModal',
             size: 'sm',
           })
         } else {
-          let data = {
-            settings: {
-              bulk_exchange_rate_configured: 'YES',
-            },
-          }
           companyStore.updateCompanySettings({
-            data,
+            data: {
+              settings: {
+                bulk_exchange_rate_configured: 'YES',
+              },
+            },
           })
         }
       })
@@ -80,3 +83,33 @@ onMounted(() => {
   })
 })
 </script>
+
+<style scoped>
+.premium-app-shell {
+  min-height: 100vh;
+  color: #0f172a;
+  background: #f4f7fb;
+}
+
+.premium-main {
+  min-height: 100vh;
+  padding-top: 76px;
+  padding-left: 272px;
+  overflow-x: hidden;
+}
+
+.premium-route-view {
+  min-height: calc(100vh - 76px);
+}
+
+@media (max-width: 767px) {
+  .premium-main {
+    padding-top: 66px;
+    padding-left: 0;
+  }
+
+  .premium-route-view {
+    min-height: calc(100vh - 66px);
+  }
+}
+</style>
