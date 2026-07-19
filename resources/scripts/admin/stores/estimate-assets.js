@@ -26,8 +26,7 @@ export const useEstimateAssetStore = defineStore({
       try {
         const response = await axios.post(
           '/api/v1/estimate-assets/photos',
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
+          formData
         )
 
         item.line_photos = [...(item.line_photos || []), response.data.data]
@@ -72,8 +71,7 @@ export const useEstimateAssetStore = defineStore({
       try {
         const response = await axios.post(
           '/api/v1/estimate-assets/attachments',
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
+          formData
         )
 
         estimate.attachments = [
