@@ -1,131 +1,76 @@
 <template>
-  <header
-    class="fixed top-0 left-0 z-20 flex items-center justify-between w-full px-4 py-3 md:h-16 md:px-8 bg-gradient-to-r from-primary-500 to-primary-400"
-  >
-    <router-link
-      to="/admin/dashboard"
-      class="float-none text-lg not-italic font-black tracking-wider text-white brand-main md:float-left font-base hidden md:block"
-    >
-      <img v-if="adminLogo" :src="adminLogo" class="h-6" alt="AutoFacture" />
-      <MainLogo v-else class="h-6" light-color="white" dark-color="white" />
-    </router-link>
-
-    <div
-      :class="{ 'is-active': globalStore.isSidebarOpen }"
-      class="flex float-left p-1 overflow-visible text-sm ease-linear bg-white border-0 rounded cursor-pointer md:hidden md:ml-0 hover:bg-gray-100"
-      @click.prevent="onToggle"
-    >
-      <BaseIcon name="MenuIcon" class="!w-6 !h-6 text-gray-500" />
+  <header class="premium-header">
+    <div class="mobile-brand">
+      <button class="mobile-menu" @click.prevent="onToggle">
+        <BaseIcon name="MenuIcon" class="h-6 w-6" />
+      </button>
+      <router-link to="/admin/dashboard">
+        <MainLogo class="h-auto w-36" light-color="#2563eb" dark-color="#0f172a" />
+      </router-link>
     </div>
 
-    <ul class="flex float-right h-8 m-0 list-none md:h-9">
-      <li
-        v-if="hasCreateAbilities"
-        class="relative hidden float-left m-0 md:block"
+    <div class="header-search">
+      <GlobalSearchBar
+        v-if="userStore.currentUser.is_owner || userStore.hasAbilities(abilities.VIEW_CUSTOMER)"
+      />
+    </div>
+
+    <div class="header-actions">
+      <button class="header-icon-button" type="button" aria-label="Notifications">
+        <BaseIcon name="BellIcon" class="h-5 w-5" />
+        <span class="notification-dot" />
+      </button>
+
+      <router-link
+        to="/admin/settings/company-info"
+        class="header-icon-button"
+        aria-label="Paramètres"
       >
-        <BaseDropdown width-class="w-48">
-          <template #activator>
-            <div
-              class="flex items-center justify-center w-8 h-8 ml-2 text-sm text-black bg-white rounded md:h-9 md:w-9"
-            >
-              <BaseIcon name="PlusIcon" class="w-5 h-5 text-gray-600" />
-            </div>
-          </template>
+        <BaseIcon name="CogIcon" class="h-5 w-5" />
+      </router-link>
 
-          <router-link to="/admin/invoices/create">
-            <BaseDropdownItem
-              v-if="userStore.hasAbilities(abilities.CREATE_INVOICE)"
-            >
-              <BaseIcon
-                name="DocumentTextIcon"
-                class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500"
-                aria-hidden="true"
-              />
-              {{ $t('invoices.new_invoice') }}
-            </BaseDropdownItem>
-          </router-link>
-
-          <router-link to="/admin/estimates/create">
-            <BaseDropdownItem
-              v-if="userStore.hasAbilities(abilities.CREATE_ESTIMATE)"
-            >
-              <BaseIcon
-                name="DocumentIcon"
-                class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500"
-                aria-hidden="true"
-              />
-              {{ $t('estimates.new_estimate') }}
-            </BaseDropdownItem>
-          </router-link>
-
-          <router-link to="/admin/customers/create">
-            <BaseDropdownItem
-              v-if="userStore.hasAbilities(abilities.CREATE_CUSTOMER)"
-            >
-              <BaseIcon
-                name="UserIcon"
-                class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500"
-                aria-hidden="true"
-              />
-              {{ $t('customers.new_customer') }}
-            </BaseDropdownItem>
-          </router-link>
-        </BaseDropdown>
-      </li>
-
-      <li class="ml-2">
-        <GlobalSearchBar
-          v-if="
-            userStore.currentUser.is_owner ||
-            userStore.hasAbilities(abilities.VIEW_CUSTOMER)
-          "
-        />
-      </li>
-
-      <li>
+      <div class="company-wrap">
         <CompanySwitcher />
-      </li>
+      </div>
 
-      <li class="relative block float-left ml-2">
-        <BaseDropdown width-class="w-48">
-          <template #activator>
-            <img
-              :src="previewAvatar"
-              alt="Compte utilisateur"
-              class="block w-8 h-8 rounded md:h-9 md:w-9 object-cover bg-white"
-              @error="useDefaultAvatar"
-            />
-          </template>
+      <BaseDropdown width-class="w-52">
+        <template #activator>
+          <button class="profile-trigger" type="button">
+            <img :src="previewAvatar" alt="Compte utilisateur" @error="useDefaultAvatar" />
+            <span class="profile-copy">
+              <strong>{{ userStore.currentUser?.name || 'Administrateur' }}</strong>
+              <small>Mon compte</small>
+            </span>
+            <span class="profile-chevron">⌄</span>
+          </button>
+        </template>
 
-          <router-link to="/admin/settings/account-settings">
-            <BaseDropdownItem>
-              <BaseIcon
-                name="CogIcon"
-                class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500"
-                aria-hidden="true"
-              />
-              {{ $t('navigation.settings') }}
-            </BaseDropdownItem>
-          </router-link>
-
-          <BaseDropdownItem @click="logout">
-            <BaseIcon
-              name="LogoutIcon"
-              class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500"
-              aria-hidden="true"
-            />
-            {{ $t('navigation.logout') }}
+        <router-link to="/admin/settings/account-settings">
+          <BaseDropdownItem>
+            <BaseIcon name="UserIcon" class="mr-3 h-5 w-5 text-slate-400" />
+            Mon compte
           </BaseDropdownItem>
-        </BaseDropdown>
-      </li>
-    </ul>
+        </router-link>
+
+        <router-link to="/admin/settings/company-info">
+          <BaseDropdownItem>
+            <BaseIcon name="CogIcon" class="mr-3 h-5 w-5 text-slate-400" />
+            Paramètres
+          </BaseDropdownItem>
+        </router-link>
+
+        <BaseDropdownItem @click="logout">
+          <BaseIcon name="LogoutIcon" class="mr-3 h-5 w-5 text-slate-400" />
+          {{ $t('navigation.logout') }}
+        </BaseDropdownItem>
+      </BaseDropdown>
+    </div>
   </header>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-
 import { useAuthStore } from '@/scripts/admin/stores/auth'
 import { useGlobalStore } from '@/scripts/admin/stores/global'
 import { useUserStore } from '@/scripts/admin/stores/user'
@@ -142,29 +87,10 @@ const avatarFallback = ref(false)
 
 const previewAvatar = computed(() => {
   const avatar = userStore.currentUser?.avatar
-
-  if (!avatarFallback.value && typeof avatar === 'string' && avatar.trim()) {
-    return avatar
-  }
-
-  return '/img/default-avatar.jpg'
+  return !avatarFallback.value && typeof avatar === 'string' && avatar.trim()
+    ? avatar
+    : '/img/default-avatar.jpg'
 })
-
-const adminLogo = computed(() => {
-  if (globalStore.globalSettings.admin_portal_logo) {
-    return '/storage/' + globalStore.globalSettings.admin_portal_logo
-  }
-
-  return false
-})
-
-const hasCreateAbilities = computed(() =>
-  userStore.hasAbilities([
-    abilities.CREATE_INVOICE,
-    abilities.CREATE_ESTIMATE,
-    abilities.CREATE_CUSTOMER,
-  ])
-)
 
 function useDefaultAvatar() {
   avatarFallback.value = true
@@ -179,3 +105,51 @@ function onToggle() {
   globalStore.setSidebarVisibility(true)
 }
 </script>
+
+<style scoped>
+.premium-header {
+  position: fixed;
+  z-index: 24;
+  top: 0;
+  right: 0;
+  left: 272px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 0 26px;
+  border-bottom: 1px solid rgba(148,163,184,.16);
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(22px);
+  box-shadow: 0 8px 30px rgba(15,23,42,.04);
+}
+.mobile-brand { display: none; }
+.header-search { width: min(520px, 46vw); }
+.header-actions { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+.header-icon-button { position: relative; display: flex; align-items: center; justify-content: center; width: 39px; height: 39px; border: 1px solid transparent; border-radius: 12px; color: #334155; background: transparent; transition: all .18s ease; }
+.header-icon-button:hover { color: #2563eb; border-color: #dbeafe; background: #eff6ff; }
+.notification-dot { position: absolute; right: 8px; top: 7px; width: 7px; height: 7px; border: 2px solid #fff; border-radius: 999px; background: #ef4444; }
+.company-wrap { min-width: 155px; }
+.profile-trigger { display: flex; align-items: center; gap: 10px; min-width: 170px; min-height: 46px; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 14px; color: #0f172a; background: #fff; box-shadow: 0 7px 20px rgba(15,23,42,.05); }
+.profile-trigger img { width: 34px; height: 34px; border-radius: 10px; object-fit: cover; }
+.profile-copy { flex: 1; min-width: 0; text-align: left; }
+.profile-copy strong { display: block; overflow: hidden; font-size: .68rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.profile-copy small { display: block; margin-top: 2px; color: #94a3b8; font-size: .55rem; }
+.profile-chevron { color: #64748b; }
+@media (max-width: 1024px) {
+  .premium-header { padding: 0 16px; }
+  .profile-copy, .profile-chevron { display: none; }
+  .profile-trigger { min-width: 46px; width: 46px; padding: 5px; }
+  .company-wrap { min-width: 125px; }
+}
+@media (max-width: 767px) {
+  .premium-header { left: 0; height: 66px; justify-content: space-between; }
+  .mobile-brand { display: flex; align-items: center; gap: 10px; }
+  .mobile-menu { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 11px; color: #334155; background: #f1f5f9; }
+  .header-search, .company-wrap, .profile-copy, .profile-chevron { display: none; }
+  .header-actions { margin-left: 0; }
+  .profile-trigger { min-width: 38px; width: 38px; min-height: 38px; height: 38px; padding: 3px; }
+  .profile-trigger img { width: 30px; height: 30px; }
+}
+</style>
