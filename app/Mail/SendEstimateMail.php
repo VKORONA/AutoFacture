@@ -4,6 +4,7 @@ namespace Crater\Mail;
 
 use Crater\Models\EmailLog;
 use Crater\Models\Estimate;
+use Crater\Models\EstimateAttachment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -16,21 +17,11 @@ class SendEstimateMail extends Mailable
 
     public $data = [];
 
-    /**
-     * Create a new message instance.
-     *
-     * @return void
-     */
     public function __construct($data)
     {
         $this->data = $data;
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
     public function build()
     {
         $log = EmailLog::create([
@@ -48,8 +39,8 @@ class SendEstimateMail extends Mailable
         $this->data['url'] = route('estimate', ['email_log' => $log->token]);
 
         $mailContent = $this->from($this->data['from'], config('mail.from.name'))
-                    ->subject($this->data['subject'])
-                    ->markdown('emails.send.estimate', ['data', $this->data]);
+            ->subject($this->data['subject'])
+            ->markdown('emails.send.estimate', ['data', $this->data]);
 
         if ($this->data['attach']['data']) {
             $mailContent->attachData(
@@ -57,6 +48,20 @@ class SendEstimateMail extends Mailable
                 $this->data['estimate']['estimate_number'].'.pdf'
             );
         }
+
+        EstimateAttachment::query()
+            ->where('estimate_id', $this->data['estimate']['id'])
+            ->where('include_in_email', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->each(function (EstimateAttachment $attachment) use ($mailContent): void {
+                $mailContent->attachFromStorageDisk(
+                    $attachment->disk,
+                    $attachment->path,
+                    $attachment->original_name,
+                    ['mime' => $attachment->mime_type],
+                );
+            });
 
         return $mailContent;
     }
