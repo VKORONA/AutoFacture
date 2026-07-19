@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Crater\Domain\FrenchInvoicing\FrenchCompanyDefaults;
+use Crater\Domain\FrenchInvoicing\FrenchCompanySetup;
 use Crater\Models\Company;
 use Crater\Models\Country;
 use Crater\Models\Currency;
@@ -54,12 +55,36 @@ class UsersTableSeeder extends Seeder
             $company->save();
         }
 
+        if (app()->environment('testing')) {
+            $company->forceFill([
+                'name' => 'Entreprise AutoFacture Test',
+                'siren' => '732829320',
+                'siret' => '73282932000074',
+                'vat_regime' => 'standard',
+                'vat_exempt' => false,
+            ])->save();
+
+            $company->address()->updateOrCreate(
+                ['company_id' => $company->id],
+                [
+                    'country_id' => 1,
+                    'address_street_1' => '1 rue du Test',
+                    'zip' => '75001',
+                    'city' => 'Paris',
+                ]
+            );
+        }
+
         $company->unique_hash = Hashids::connection(Company::class)->encode($company->id);
         $company->save();
         $company->setupDefaultData();
 
         $euroId = Currency::where('code', 'EUR')->value('id');
         app(FrenchCompanyDefaults::class)->apply($company, $euroId);
+
+        if (app()->environment('testing')) {
+            app(FrenchCompanySetup::class)->synchronizeVatDefaults($company->refresh());
+        }
 
         $user->companies()->syncWithoutDetaching([$company->id]);
         BouncerFacade::scope()->to($company->id);
