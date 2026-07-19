@@ -44,12 +44,22 @@ const { t } = useI18n()
 const exchangeRateStore = useExchangeRateStore()
 const companyStore = useCompanyStore()
 
-const isAppLoaded = computed(() => {
-  return globalStore.isAppLoaded
-})
+const isAppLoaded = computed(() => globalStore.isAppLoaded)
 
 onMounted(() => {
   globalStore.bootstrap().then((res) => {
+    const companySetup = res.data.company_setup
+
+    if (companySetup && !companySetup.complete) {
+      if (route.name !== 'company.info') {
+        router.replace({
+          name: 'company.info',
+          query: { setup: 'required' },
+        })
+      }
+      return
+    }
+
     if (route.meta.ability && !userStore.hasAbilities(route.meta.ability)) {
       router.push({ name: 'account.settings' })
     } else if (route.meta.isOwner && !userStore.currentUser.is_owner) {
@@ -59,20 +69,19 @@ onMounted(() => {
     if (
       res.data.current_company_settings.bulk_exchange_rate_configured === 'NO'
     ) {
-      exchangeRateStore.fetchBulkCurrencies().then((res) => {
-        if (res.data.currencies.length) {
+      exchangeRateStore.fetchBulkCurrencies().then((response) => {
+        if (response.data.currencies.length) {
           modalStore.openModal({
             componentName: 'ExchangeRateBulkUpdateModal',
             size: 'sm',
           })
         } else {
-          let data = {
-            settings: {
-              bulk_exchange_rate_configured: 'YES',
-            },
-          }
           companyStore.updateCompanySettings({
-            data,
+            data: {
+              settings: {
+                bulk_exchange_rate_configured: 'YES',
+              },
+            },
           })
         }
       })
