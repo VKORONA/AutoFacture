@@ -160,6 +160,8 @@ class ElectronicInvoiceConnectionController extends Controller
             [
                 'provider' => ElectronicInvoiceConnection::PROVIDER_SUPERPDP,
                 'environment' => config('electronic-invoicing.providers.superpdp.environment', 'sandbox'),
+                'setup_step' => 1,
+                'connection_status' => ElectronicInvoiceConnection::STATUS_DRAFT,
             ],
         );
     }
@@ -177,8 +179,8 @@ class ElectronicInvoiceConnectionController extends Controller
                 'company_verified' => (bool) $connection->company_verified_at,
                 'has_credentials' => $connection->hasCredentials(),
                 'masked_client_id' => $connection->maskedClientId(),
-                'last_tested_at' => optional($connection->last_tested_at)?->toIso8601String(),
-                'last_connected_at' => optional($connection->last_connected_at)?->toIso8601String(),
+                'last_tested_at' => $connection->last_tested_at?->toIso8601String(),
+                'last_connected_at' => $connection->last_connected_at?->toIso8601String(),
                 'last_error_code' => $connection->last_error_code,
                 'last_error_message' => $connection->last_error_message,
             ],
