@@ -12,6 +12,7 @@ export const useAccountingStore = defineStore({
     isLoading: false,
     isSaving: false,
     isGenerating: false,
+    downloadingId: null,
   }),
 
   actions: {
@@ -62,6 +63,31 @@ export const useAccountingStore = defineStore({
         throw error
       } finally {
         this.isGenerating = false
+      }
+    },
+
+    async downloadExport(batch) {
+      this.downloadingId = batch.id
+
+      try {
+        const response = await axios.get(batch.download_url, {
+          responseType: 'blob',
+        })
+        const url = URL.createObjectURL(response.data)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `AutoFacture-export-comptable-${batch.period_start}-${batch.period_end}.zip`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+
+        return response
+      } catch (error) {
+        handleError(error)
+        throw error
+      } finally {
+        this.downloadingId = null
       }
     },
   },
