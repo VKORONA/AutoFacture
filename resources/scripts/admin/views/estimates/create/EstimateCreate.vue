@@ -43,9 +43,7 @@
             target="_blank"
           >
             <BaseButton class="mr-3" variant="primary-outline" type="button">
-              <span class="flex">
-                {{ $t('general.view_pdf') }}
-              </span>
+              <span class="flex">{{ $t('general.view_pdf') }}</span>
             </BaseButton>
           </router-link>
 
@@ -68,7 +66,6 @@
         </template>
       </BasePageHeader>
 
-      <!-- Select Customer & Basic Fields  -->
       <EstimateBasicFields
         :v="v$"
         :is-loading="isLoadingContent"
@@ -76,7 +73,6 @@
       />
 
       <BaseScrollPane>
-        <!-- Estimate Items -->
         <Items
           :currency="estimateStore.newEstimate.selectedCurrency"
           :is-loading="isLoadingContent"
@@ -85,17 +81,8 @@
           store-prop="newEstimate"
         />
 
-        <!-- Estimate Footer Section -->
-        <div
-          class="
-            block
-            mt-10
-            estimate-foot
-            lg:flex lg:justify-between lg:items-start
-          "
-        >
+        <div class="block mt-10 estimate-foot lg:flex lg:justify-between lg:items-start">
           <div class="relative w-full lg:w-1/2">
-            <!-- Estimate Custom Notes -->
             <NoteFields
               :store="estimateStore"
               store-prop="newEstimate"
@@ -103,7 +90,6 @@
               type="Estimate"
             />
 
-            <!-- Estimate Custom Fields -->
             <EstimateCustomFields
               type="Estimate"
               :is-edit="isEdit"
@@ -114,7 +100,11 @@
               class="mb-6"
             />
 
-            <!-- Estimate Template Button-->
+            <EstimateAnnexPanel
+              v-if="!isLoadingContent"
+              :estimate="estimateStore.newEstimate"
+            />
+
             <SelectTemplate
               :store="estimateStore"
               component-name="EstimateTemplate"
@@ -137,7 +127,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -159,6 +149,7 @@ import SelectTemplate from '@/scripts/admin/components/estimate-invoice-common/S
 import EstimateCustomFields from '@/scripts/admin/components/custom-fields/CreateCustomFields.vue'
 import NoteFields from '@/scripts/admin/components/estimate-invoice-common/CreateNotesField.vue'
 import EstimateBasicFields from './EstimateCreateBasicFields.vue'
+import EstimateAnnexPanel from '@/scripts/admin/components/estimates/EstimateAnnexPanel.vue'
 import SelectTemplateModal from '@/scripts/admin/components/modal-components/SelectTemplateModal.vue'
 import TaxTypeModal from '@/scripts/admin/components/modal-components/TaxTypeModal.vue'
 import ItemModal from '@/scripts/admin/components/modal-components/ItemModal.vue'
@@ -171,7 +162,7 @@ const customFieldStore = useCustomFieldStore()
 const { t } = useI18n()
 
 const estimateValidationScope = 'newEstimate'
-let isSaving = ref(false)
+const isSaving = ref(false)
 const isMarkAsDefault = ref(false)
 
 const estimateNoteFieldList = ref([
@@ -182,16 +173,14 @@ const estimateNoteFieldList = ref([
   'estimateCustom',
 ])
 
-let route = useRoute()
-let router = useRouter()
+const route = useRoute()
+const router = useRouter()
 
-let isLoadingContent = computed(() => estimateStore.isFetchingInitialSettings)
-
-let pageTitle = computed(() =>
+const isLoadingContent = computed(() => estimateStore.isFetchingInitialSettings)
+const pageTitle = computed(() =>
   isEdit.value ? t('estimates.edit_estimate') : t('estimates.new_estimate')
 )
-
-let isEdit = computed(() => route.name === 'estimates.edit')
+const isEdit = computed(() => route.name === 'estimates.edit')
 
 const salesTaxEnabled = computed(() => {
   return (
@@ -257,7 +246,7 @@ async function submitForm() {
 
   isSaving.value = true
 
-  let data = {
+  const data = {
     ...estimateStore.newEstimate,
     sub_total: estimateStore.getSubTotal,
     total: estimateStore.getTotal,
@@ -269,7 +258,7 @@ async function submitForm() {
     : estimateStore.addEstimate
 
   try {
-    let res = await action(data)
+    const res = await action(data)
 
     if (res.data.data) {
       router.push(`/admin/estimates/${res.data.data.id}/view`)
