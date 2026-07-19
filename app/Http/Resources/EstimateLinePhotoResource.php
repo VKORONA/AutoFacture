@@ -16,7 +16,10 @@ class EstimateLinePhotoResource extends JsonResource
             'sort_order' => $this->sort_order,
             'width' => $this->width,
             'height' => $this->height,
+            'mime_type' => $this->mime_type,
             'size_bytes' => $this->size_bytes,
+            'web_size_bytes' => $this->web_size_bytes,
+            'pdf_size_bytes' => $this->pdf_size_bytes,
             'thumbnail_url' => route('estimate-assets.photos.show', [
                 'photo' => $this->id,
                 'variant' => 'thumbnail',
