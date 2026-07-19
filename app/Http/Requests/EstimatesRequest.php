@@ -32,14 +32,14 @@ class EstimatesRequest extends FormRequest
             'total' => ['required'],
             'tax' => ['required'],
             'template_name' => ['required'],
-            'asset_draft_token' => ['required', 'uuid'],
+            'asset_draft_token' => ['nullable', 'uuid'],
             'annex_title' => ['nullable', 'string', 'max:255'],
             'annex_notes' => ['nullable', 'string', 'max:20000'],
             'include_photo_annex' => ['sometimes', 'boolean'],
             'items' => ['required', 'array'],
             'items.*.description' => ['nullable'],
             'items.*.name' => ['required'],
-            'items.*.line_uuid' => ['required', 'uuid'],
+            'items.*.line_uuid' => ['nullable', 'uuid'],
             'items.*.quantity' => ['required'],
             'items.*.price' => ['required'],
         ];
@@ -70,7 +70,7 @@ class EstimatesRequest extends FormRequest
         $exchangeRate = $companyCurrency != $currentCurrency ? $this->exchange_rate : 1;
         $currency = Customer::find($this->customer_id)->currency_id;
 
-        return collect($this->except('items', 'taxes', 'asset_draft_token'))
+        return collect($this->except('items', 'taxes', 'asset_draft_token', 'attachments'))
             ->merge([
                 'creator_id' => $this->user()->id ?? null,
                 'status' => $this->has('estimateSend') ? Estimate::STATUS_SENT : Estimate::STATUS_DRAFT,
