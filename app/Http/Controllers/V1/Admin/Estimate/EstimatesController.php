@@ -2,11 +2,13 @@
 
 namespace Crater\Http\Controllers\V1\Admin\Estimate;
 
+use Crater\Domain\FrenchInvoicing\FrenchCompanySetup;
 use Crater\Http\Controllers\Controller;
 use Crater\Http\Requests\DeleteEstimatesRequest;
 use Crater\Http\Requests\EstimatesRequest;
 use Crater\Http\Resources\EstimateResource;
 use Crater\Jobs\GenerateEstimatePdfJob;
+use Crater\Models\Company;
 use Crater\Models\Estimate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,9 +34,12 @@ class EstimatesController extends Controller
             ]]);
     }
 
-    public function store(EstimatesRequest $request)
+    public function store(EstimatesRequest $request, FrenchCompanySetup $companySetup)
     {
         $this->authorize('create', Estimate::class);
+
+        $company = Company::findOrFail((int) $request->header('company'));
+        $companySetup->assertComplete($company);
 
         $estimate = DB::transaction(
             fn (): Estimate => Estimate::createEstimate($request)
