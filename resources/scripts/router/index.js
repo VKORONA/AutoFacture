@@ -1,15 +1,42 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/scripts/admin/stores/user'
 import { useGlobalStore } from '@/scripts/admin/stores/global'
+import abilities from '@/scripts/admin/stub/abilities'
 
-//admin routes
+// Admin routes
 import AdminRoutes from '@/scripts/admin/admin-router'
-//  Customers routes
+// Customer routes
 import CustomerRoutes from '@/scripts/customer/customer-router'
-//Payment Routes
+
+const LayoutBasic = () => import('@/scripts/admin/layouts/LayoutBasic.vue')
+const ElectronicInvoicing = () =>
+  import('@/scripts/admin/views/electronic-invoicing/Index.vue')
+
+const ElectronicInvoicingRoutes = [
+  {
+    path: '/admin/electronic-invoicing',
+    component: LayoutBasic,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'electronic-invoicing.index',
+        meta: {
+          requiresAuth: true,
+          ability: abilities.VIEW_INVOICE,
+        },
+        component: ElectronicInvoicing,
+      },
+    ],
+  },
+]
 
 let routes = []
-routes = routes.concat(AdminRoutes, CustomerRoutes)
+routes = routes.concat(
+  ElectronicInvoicingRoutes,
+  AdminRoutes,
+  CustomerRoutes
+)
 
 const router = createRouter({
   history: createWebHistory(),
