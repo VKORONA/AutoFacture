@@ -12,101 +12,38 @@
     </colgroup>
     <thead class="bg-white border border-gray-200 border-solid">
       <tr>
-        <th
-          class="
-            px-5
-            py-3
-            text-sm
-            not-italic
-            font-medium
-            leading-5
-            text-left text-gray-700
-            border-t border-b border-gray-200 border-solid
-          "
-        >
+        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-left text-gray-700 border-t border-b border-gray-200 border-solid">
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
-          <span v-else class="pl-7">
-            {{ $tc('items.item', 2) }}
-          </span>
+          <span v-else class="pl-7">{{ $tc('items.item', 2) }}</span>
         </th>
-        <th
-          class="
-            px-5
-            py-3
-            text-sm
-            not-italic
-            font-medium
-            leading-5
-            text-right text-gray-700
-            border-t border-b border-gray-200 border-solid
-          "
-        >
+        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-right text-gray-700 border-t border-b border-gray-200 border-solid">
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
-          <span v-else>
-            {{ $t('invoices.item.quantity') }}
-          </span>
+          <span v-else>{{ $t('invoices.item.quantity') }}</span>
         </th>
-        <th
-          class="
-            px-5
-            py-3
-            text-sm
-            not-italic
-            font-medium
-            leading-5
-            text-left text-gray-700
-            border-t border-b border-gray-200 border-solid
-          "
-        >
+        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-left text-gray-700 border-t border-b border-gray-200 border-solid">
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
-          <span v-else>
-            {{ $t('invoices.item.price') }}
-          </span>
+          <span v-else>{{ $t('invoices.item.price') }}</span>
         </th>
         <th
           v-if="store[storeProp].discount_per_item === 'YES'"
-          class="
-            px-5
-            py-3
-            text-sm
-            not-italic
-            font-medium
-            leading-5
-            text-left text-gray-700
-            border-t border-b border-gray-200 border-solid
-          "
+          class="px-5 py-3 text-sm not-italic font-medium leading-5 text-left text-gray-700 border-t border-b border-gray-200 border-solid"
         >
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
-          <span v-else>
-            {{ $t('invoices.item.discount') }}
-          </span>
+          <span v-else>{{ $t('invoices.item.discount') }}</span>
         </th>
-        <th
-          class="
-            px-5
-            py-3
-            text-sm
-            not-italic
-            font-medium
-            leading-5
-            text-right text-gray-700
-            border-t border-b border-gray-200 border-solid
-          "
-        >
+        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-right text-gray-700 border-t border-b border-gray-200 border-solid">
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
-          <span v-else class="pr-10 column-heading">
-            {{ $t('invoices.item.amount') }}
-          </span>
+          <span v-else class="pr-10 column-heading">{{ $t('invoices.item.amount') }}</span>
         </th>
       </tr>
     </thead>
@@ -133,31 +70,26 @@
   </table>
 
   <div
-    class="
-      flex
-      items-center
-      justify-center
-      w-full
-      px-6
-      py-3
-      text-base
-      border border-t-0 border-gray-200 border-solid
-      cursor-pointer
-      text-primary-400
-      hover:bg-primary-100
-    "
-    @click="store.addItem"
+    class="flex items-center justify-center w-full px-6 py-3 text-base border border-t-0 border-gray-200 border-solid cursor-pointer text-primary-400 hover:bg-primary-100"
+    @click="addItem"
   >
     <BaseIcon name="PlusCircleIcon" class="mr-2" />
     {{ $t('general.add_new_item') }}
   </div>
+
+  <EstimateLinePhotosPanel
+    v-if="storeProp === 'newEstimate' && !isLoading"
+    :estimate="store[storeProp]"
+  />
 </template>
 
 <script setup>
 import { useCompanyStore } from '@/scripts/admin/stores/company'
 import { computed } from 'vue'
+import Guid from 'guid'
 import draggable from 'vuedraggable'
 import Item from './CreateItemRow.vue'
+import EstimateLinePhotosPanel from '@/scripts/admin/components/estimates/EstimateLinePhotosPanel.vue'
 
 const props = defineProps({
   store: {
@@ -187,8 +119,18 @@ const companyStore = useCompanyStore()
 const defaultCurrency = computed(() => {
   if (props.currency) {
     return props.currency
-  } else {
-    return companyStore.selectedCompanyCurrency
   }
+
+  return companyStore.selectedCompanyCurrency
 })
+
+function addItem() {
+  props.store.addItem()
+
+  if (props.storeProp !== 'newEstimate') return
+
+  const item = props.store[props.storeProp].items.at(-1)
+  if (!item.line_uuid) item.line_uuid = Guid.raw()
+  if (!Array.isArray(item.line_photos)) item.line_photos = []
+}
 </script>
