@@ -1,2 +1,2 @@
 @php($autofactureTheme = 'premium')
-@include('app.pdf.shared.autofacture-invoice')
+@include('app.pdf.shared.autofacture-premium-invoice')
