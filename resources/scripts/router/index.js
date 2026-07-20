@@ -12,6 +12,8 @@ const LayoutBasic = () => import('@/scripts/admin/layouts/LayoutBasic.vue')
 const ElectronicInvoicing = () =>
   import('@/scripts/admin/views/electronic-invoicing/Index.vue')
 const Accounting = () => import('@/scripts/admin/views/accounting/Index.vue')
+const DocumentTemplates = () =>
+  import('@/scripts/admin/views/settings/DocumentTemplatesSetting.vue')
 
 const AdditionalAdminRoutes = [
   {
@@ -43,6 +45,22 @@ const AdditionalAdminRoutes = [
           ability: abilities.VIEW_INVOICE,
         },
         component: Accounting,
+      },
+    ],
+  },
+  {
+    path: '/admin/document-templates',
+    component: LayoutBasic,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'document-templates.index',
+        meta: {
+          requiresAuth: true,
+          ability: abilities.VIEW_INVOICE,
+        },
+        component: DocumentTemplates,
       },
     ],
   },
