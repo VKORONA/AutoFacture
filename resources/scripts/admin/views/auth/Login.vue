@@ -2,7 +2,7 @@
   <form id="loginForm" class="mt-12 text-left" @submit.prevent="onSubmit">
     <BaseInputGroup
       :error="v$.email.$error && v$.email.$errors[0].$message"
-      :label="$t('login.email')"
+      label="Identifiant"
       class="mb-4"
       required
     >
@@ -10,8 +10,10 @@
         v-model="authStore.loginData.email"
         :invalid="v$.email.$error"
         focus
-        type="email"
-        name="email"
+        type="text"
+        name="username"
+        autocomplete="username"
+        placeholder="admin"
         @input="v$.email.$touch()"
       />
     </BaseInputGroup>
@@ -27,6 +29,7 @@
         :invalid="v$.password.$error"
         :type="getInputType"
         name="password"
+        autocomplete="current-password"
         @input="v$.password.$touch()"
       >
         <template #right>
@@ -41,8 +44,9 @@
             name="EyeIcon"
             class="w-5 h-5 mr-1 text-gray-500 cursor-pointer"
             @click="isShowPassword = !isShowPassword"
-          /> </template
-      ></BaseInput>
+          />
+        </template>
+      </BaseInput>
     </BaseInputGroup>
 
     <div class="mt-5 mb-8">
@@ -66,23 +70,21 @@ import axios from 'axios'
 import { ref, computed } from 'vue'
 import { useNotificationStore } from '@/scripts/stores/notification'
 import { useRouter } from 'vue-router'
-import { required, email, helpers } from '@vuelidate/validators'
+import { required, helpers } from '@vuelidate/validators'
 import { useVuelidate } from '@vuelidate/core'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/scripts/admin/stores/auth'
-import { handleError } from '@/scripts/helpers/error-handling'
 
 const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const router = useRouter()
 const isLoading = ref(false)
-let isShowPassword = ref(false)
+const isShowPassword = ref(false)
 
 const rules = {
   email: {
     required: helpers.withMessage(t('validation.required'), required),
-    email: helpers.withMessage(t('validation.email_incorrect'), email),
   },
   password: {
     required: helpers.withMessage(t('validation.required'), required),
@@ -113,14 +115,13 @@ async function onSubmit() {
   isLoading.value = true
 
   try {
-    isLoading.value = true
     await authStore.login(authStore.loginData)
 
     router.push('/admin/dashboard')
 
     notificationStore.showNotification({
       type: 'success',
-      message: 'Logged in successfully.',
+      message: 'Connexion réussie.',
     })
   } catch (error) {
     isLoading.value = false
