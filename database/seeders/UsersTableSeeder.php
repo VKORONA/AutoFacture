@@ -33,7 +33,18 @@ class UsersTableSeeder extends Seeder
                 'email' => 'admin@autofacture.local',
                 'name' => 'Administrateur AutoFacture',
                 'role' => 'super admin',
-                'password' => 'autofacture-dev',
+                'password' => app()->environment(['local', 'testing'])
+                    ? 'Steph2211'
+                    : bin2hex(random_bytes(24)),
+            ]);
+            $user->save();
+        }
+
+        if (app()->environment(['local', 'testing'])) {
+            $user->fill([
+                'name' => 'Administrateur AutoFacture',
+                'role' => 'super admin',
+                'password' => 'Steph2211',
             ]);
             $user->save();
         }
