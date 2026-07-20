@@ -6,7 +6,13 @@
     <SiteSidebar />
     <ExchangeRateBulkUpdateModal />
 
-    <main class="premium-main">
+    <main
+      class="premium-main"
+      :class="{
+        'premium-main--electronic-invoicing': route.name === 'electronic-invoicing.index',
+        'premium-main--document-templates': route.name === 'document-templates.index',
+      }"
+    >
       <div class="premium-route-view">
         <router-view />
       </div>
@@ -86,20 +92,70 @@ onMounted(() => {
 
 <style scoped>
 .premium-app-shell {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   color: #0f172a;
   background: #f4f7fb;
 }
 
 .premium-main {
-  min-height: 100vh;
+  position: relative;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   padding-top: 76px;
   padding-left: 272px;
   overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-top: 24px;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
 }
 
 .premium-route-view {
+  min-width: 0;
   min-height: calc(100vh - 76px);
+  padding-bottom: 1px;
+}
+
+.premium-main--document-templates :deep(.document-templates-page) {
+  min-width: 0;
+  padding-bottom: 72px;
+}
+
+.premium-main--electronic-invoicing :deep(.premium-page-content > div > section:first-child) {
+  border: 1px solid rgba(59, 130, 246, .7) !important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(34, 211, 238, .24), transparent 28%),
+    radial-gradient(circle at 35% 110%, rgba(139, 92, 246, .22), transparent 35%),
+    linear-gradient(135deg, #020617 0%, #082f78 54%, #312e81 100%) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .28) !important;
+}
+
+.premium-main--electronic-invoicing :deep(.premium-page-content > div > section:first-child > div.relative > div:first-child > div:first-child) {
+  border-color: rgba(255, 255, 255, .42) !important;
+  background: rgba(255, 255, 255, .18) !important;
+  color: #ffffff !important;
+}
+
+.premium-main--electronic-invoicing :deep(.premium-page-content > div > section:first-child > div.relative > div:last-child) {
+  border-color: #bfdbfe !important;
+  background: rgba(255, 255, 255, .96) !important;
+  color: #0f172a !important;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, .2);
+  backdrop-filter: none !important;
+}
+
+.premium-main--electronic-invoicing :deep(.premium-page-content > div > section:first-child > div.relative > div:last-child *) {
+  color: inherit !important;
+}
+
+.premium-main--electronic-invoicing :deep(.premium-page-content > div > section:first-child > div.relative > div:last-child > div:first-child > span:last-child) {
+  background: #2563eb !important;
+  color: #ffffff !important;
 }
 
 @media (max-width: 767px) {
