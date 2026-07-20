@@ -1,5 +1,6 @@
 <?php
 
+use Crater\Models\Currency;
 use Crater\Models\Customer;
 use Crater\Models\User;
 use Illuminate\Support\Facades\Artisan;
@@ -35,6 +36,8 @@ it('marks a private customer as B2C without B2B electronic invoicing', function 
         ->assertJsonPath('data.customer_type_label', 'Particulier')
         ->assertJsonPath('data.electronic_invoicing_profile.customer_category', 'b2c')
         ->assertJsonPath('data.electronic_invoicing_profile.document_mode', 'standard_pdf')
+        ->assertJsonPath('data.electronic_invoicing_profile.delivery_channel', 'direct_customer_delivery')
+        ->assertJsonPath('data.electronic_invoicing_profile.requires_approved_platform', false)
         ->assertJsonPath('data.electronic_invoicing_profile.e_invoicing_applicable', false)
         ->assertJsonPath('data.electronic_invoicing_profile.e_reporting_applicable', true)
         ->assertJsonPath('data.electronic_invoicing_profile.status', 'not_applicable_b2c');
@@ -52,12 +55,16 @@ it('marks an identified professional customer as ready for structured invoicing'
         ->assertJsonPath('data.customer_type_label', 'Professionnel')
         ->assertJsonPath('data.electronic_invoicing_profile.customer_category', 'b2b')
         ->assertJsonPath('data.electronic_invoicing_profile.document_mode', 'factur_x_ready')
+        ->assertJsonPath('data.electronic_invoicing_profile.delivery_channel', 'approved_platform')
+        ->assertJsonPath('data.electronic_invoicing_profile.requires_approved_platform', true)
         ->assertJsonPath('data.electronic_invoicing_profile.e_invoicing_applicable', true)
         ->assertJsonPath('data.electronic_invoicing_profile.status', 'ready');
 });
 
 it('removes professional identifiers when a private customer is submitted', function () {
-    $currencyId = $this->user->currency_id;
+    $currencyId = Currency::query()->value('id');
+
+    expect($currencyId)->not->toBeNull();
 
     postJson('/api/v1/customers', [
         'name' => 'Marie Dupont',
