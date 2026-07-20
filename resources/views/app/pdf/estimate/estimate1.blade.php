@@ -1,2 +1,2 @@
 @php($autofactureTheme = 'premium')
-@include('app.pdf.shared.autofacture-estimate')
+@include('app.pdf.shared.autofacture-premium-estimate')
