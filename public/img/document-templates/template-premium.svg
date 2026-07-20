@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="900" viewBox="0 0 640 900">
+  <rect width="640" height="900" fill="#f8fbff"/>
+  <rect x="22" y="22" width="596" height="856" rx="22" fill="#fff" stroke="#dbeafe"/>
+  <rect x="42" y="44" width="218" height="205" rx="18" fill="#061a42"/>
+  <text x="62" y="78" font-family="Arial" font-size="15" font-weight="700" fill="#67e8f9">ÉMETTEUR</text>
+  <text x="62" y="111" font-family="Arial" font-size="26" font-weight="700" fill="#fff">VOTRE ENTREPRISE</text>
+  <text x="62" y="142" font-family="Arial" font-size="13" fill="#bfdbfe">Activité et spécialité</text>
+  <line x1="62" y1="166" x2="235" y2="166" stroke="#38bdf8"/>
+  <text x="62" y="194" font-family="Arial" font-size="12" fill="#dbeafe">Adresse • SIRET • TVA</text>
+  <text x="62" y="220" font-family="Arial" font-size="12" fill="#dbeafe">contact@entreprise.fr</text>
+  <text x="376" y="74" font-family="Arial" font-size="38" font-weight="800" fill="#071a3f">FACTURE / DEVIS</text>
+  <text x="376" y="110" font-family="Arial" font-size="17" font-weight="700" fill="#2563eb">N° DOC-2026-001</text>
+  <rect x="376" y="132" width="212" height="116" rx="16" fill="#f8fafc" stroke="#dbeafe"/>
+  <text x="396" y="164" font-family="Arial" font-size="12" font-weight="700" fill="#2563eb">CLIENT</text>
+  <text x="396" y="191" font-family="Arial" font-size="18" font-weight="700" fill="#0f172a">SOCIÉTÉ CLIENTE</text>
+  <text x="396" y="216" font-family="Arial" font-size="12" fill="#64748b">Adresse • SIRET • Contact</text>
+  <rect x="42" y="272" width="546" height="58" rx="14" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="62" y="297" font-family="Arial" font-size="11" font-weight="700" fill="#2563eb">RÉFÉRENCE / PROJET</text>
+  <text x="62" y="317" font-family="Arial" font-size="13" font-weight="700" fill="#0f172a">Mission ou prestation concernée</text>
+  <rect x="42" y="356" width="546" height="42" rx="7" fill="#071a3f"/>
+  <text x="62" y="382" font-family="Arial" font-size="12" font-weight="700" fill="#fff">DÉSIGNATION</text>
+  <text x="385" y="382" font-family="Arial" font-size="12" font-weight="700" fill="#fff">QTÉ</text>
+  <text x="456" y="382" font-family="Arial" font-size="12" font-weight="700" fill="#fff">PU HT</text>
+  <text x="530" y="382" font-family="Arial" font-size="12" font-weight="700" fill="#fff">TOTAL</text>
+  <g font-family="Arial" font-size="12" fill="#0f172a">
+    <rect x="42" y="398" width="546" height="68" fill="#fff" stroke="#e2e8f0"/><text x="62" y="425" font-weight="700">Prestation professionnelle détaillée</text><text x="62" y="449" fill="#64748b">Description claire de la mission et des livrables.</text><text x="400" y="433">1</text><text x="460" y="433">950 €</text><text x="535" y="433">950 €</text>
+    <rect x="42" y="466" width="546" height="68" fill="#f8fafc" stroke="#e2e8f0"/><text x="62" y="493" font-weight="700">Rapport, étude ou fourniture</text><text x="62" y="517" fill="#64748b">Précisions contractuelles complémentaires.</text><text x="400" y="501">1</text><text x="460" y="501">650 €</text><text x="535" y="501">650 €</text>
+  </g>
+  <rect x="42" y="562" width="252" height="122" rx="14" fill="#f8fafc" stroke="#dbeafe"/>
+  <text x="62" y="592" font-family="Arial" font-size="12" font-weight="700" fill="#2563eb">INFORMATIONS DE PAIEMENT</text>
+  <text x="62" y="620" font-family="Arial" font-size="12" fill="#334155">IBAN • BIC • Conditions</text>
+  <rect x="314" y="562" width="274" height="122" rx="14" fill="#071a3f"/>
+  <text x="334" y="592" font-family="Arial" font-size="12" fill="#bfdbfe">TOTAL TTC</text>
+  <text x="334" y="643" font-family="Arial" font-size="34" font-weight="800" fill="#fff">1 920,00 €</text>
+  <rect x="42" y="714" width="546" height="72" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="62" y="744" font-family="Arial" font-size="11" font-weight="700" fill="#2563eb">MENTIONS ET CONDITIONS</text>
+  <text x="62" y="768" font-family="Arial" font-size="12" fill="#475569">Échéance, pénalités, conditions particulières et informations légales.</text>
+  <rect x="42" y="812" width="546" height="36" rx="10" fill="#071a3f"/>
+  <text x="315" y="835" text-anchor="middle" font-family="Arial" font-size="11" fill="#dbeafe">Document professionnel généré par AutoFacture</text>
+</svg>
