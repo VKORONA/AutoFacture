@@ -121,7 +121,6 @@ class Customer extends Authenticatable implements HasMedia
     public function getAvatarAttribute()
     {
         $avatar = $this->getMedia('customer_avatar')->first();
-
         if ($avatar) {
             return  asset($avatar->getUrl());
         }
@@ -261,6 +260,11 @@ class Customer extends Authenticatable implements HasMedia
         return $query->where('name', 'LIKE', '%'.$displayName.'%');
     }
 
+    public function scopeWhereCustomerType($query, $customerType)
+    {
+        return $query->where('customer_type', $customerType);
+    }
+
     public function scopeWhereOrder($query, $orderByField, $orderBy)
     {
         $query->orderBy($orderByField, $orderBy);
@@ -322,6 +326,10 @@ class Customer extends Authenticatable implements HasMedia
 
         if ($filters->get('display_name')) {
             $query->whereDisplayName($filters->get('display_name'));
+        }
+
+        if ($filters->get('customer_type')) {
+            $query->whereCustomerType($filters->get('customer_type'));
         }
 
         if ($filters->get('customer_id')) {

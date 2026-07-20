@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Resources;
 
+use Crater\Domain\FrenchInvoicing\CustomerElectronicInvoicingProfile;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CustomerResource extends JsonResource
@@ -12,6 +13,8 @@ class CustomerResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'customer_type' => $this->customer_type,
+            'customer_type_label' => $this->customer_type === 'individual' ? 'Particulier' : 'Professionnel',
+            'electronic_invoicing_profile' => app(CustomerElectronicInvoicingProfile::class)->for($this->resource),
             'email' => $this->email,
             'electronic_invoicing_email' => $this->electronic_invoicing_email,
             'phone' => $this->phone,

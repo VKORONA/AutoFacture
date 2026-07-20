@@ -1,14 +1,14 @@
 @php
     $themes = [
-        'night' => [
-            'page' => '#08142d',
-            'surface' => '#0f2348',
-            'surface_alt' => '#122b57',
-            'text' => '#edf4ff',
-            'muted' => '#a9bfdf',
-            'accent' => '#31a7ff',
-            'border' => '#294775',
-            'total' => '#087dff',
+        'standard' => [
+            'page' => '#ffffff',
+            'surface' => '#f8fafc',
+            'surface_alt' => '#eef4fb',
+            'text' => '#1e293b',
+            'muted' => '#64748b',
+            'accent' => '#1d4ed8',
+            'border' => '#dbe4ef',
+            'total' => '#123b72',
         ],
         'franchise' => [
             'page' => '#ffffff',
@@ -21,8 +21,9 @@
             'total' => '#047857',
         ],
     ];
-    $theme = $themes[$autofactureTheme ?? 'night'] ?? $themes['night'];
+    $theme = $themes[$autofactureTheme ?? 'standard'] ?? $themes['standard'];
     $isFranchise = ($autofactureTheme ?? null) === 'franchise';
+    $customerIsIndividual = data_get($invoice, 'customer.customer_type') === 'individual';
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -30,7 +31,7 @@
     <meta charset="UTF-8">
     <title>Facture - {{ $invoice->invoice_number }}</title>
     <style>
-        @page { margin: 28px 34px; background: {{ $theme['page'] }}; }
+        @page { margin: 26px 32px 30px; background: {{ $theme['page'] }}; }
         * { box-sizing: border-box; }
         body {
             margin: 0;
@@ -41,20 +42,25 @@
             line-height: 1.45;
         }
         table { border-collapse: collapse; }
-        .document-header { width: 100%; margin-bottom: 18px; }
-        .document-header td { vertical-align: top; }
+        .document-header { width: 100%; margin-bottom: 15px; border-bottom: 2px solid {{ $theme['accent'] }}; }
+        .document-header td { padding-bottom: 12px; vertical-align: top; }
         .brand { width: 58%; }
-        .brand img { max-width: 190px; max-height: 58px; }
-        .brand-name { font-size: 21px; font-weight: bold; color: {{ $theme['accent'] }}; }
+        .brand img { max-width: 180px; max-height: 54px; }
+        .brand-name { font-size: 20px; font-weight: bold; color: {{ $theme['accent'] }}; }
         .document-title { text-align: right; }
-        .document-title h1 { margin: 0; font-size: 29px; letter-spacing: 1px; }
-        .document-number { margin-top: 5px; color: {{ $theme['accent'] }}; font-size: 13px; font-weight: bold; }
-        .meta { margin-top: 9px; color: {{ $theme['muted'] }}; line-height: 1.7; }
-        .parties { width: 100%; margin-bottom: 16px; }
-        .parties td { width: 50%; padding: 13px; vertical-align: top; border: 1px solid {{ $theme['border'] }}; background: {{ $theme['surface'] }}; }
-        .parties td + td { border-left: 7px solid {{ $theme['page'] }}; }
-        .section-label { margin-bottom: 5px; color: {{ $theme['accent'] }}; font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: .8px; }
-        .reference { margin: 0 0 15px; padding: 9px 12px; border-left: 4px solid {{ $theme['accent'] }}; background: {{ $theme['surface_alt'] }}; }
+        .document-title h1 { margin: 0; font-size: 27px; letter-spacing: .8px; }
+        .document-number { margin-top: 4px; color: {{ $theme['accent'] }}; font-size: 12px; font-weight: bold; }
+        .document-status { margin-top: 5px; color: {{ $theme['muted'] }}; font-size: 8px; }
+        .facts { width: 100%; margin-bottom: 14px; background: {{ $theme['surface'] }}; }
+        .facts td { padding: 8px 10px; border: 1px solid {{ $theme['border'] }}; vertical-align: top; }
+        .fact-label { display: block; color: {{ $theme['muted'] }}; font-size: 7px; text-transform: uppercase; }
+        .fact-value { display: block; margin-top: 2px; font-weight: bold; }
+        .parties { width: 100%; margin-bottom: 15px; }
+        .parties td { width: 50%; padding: 12px; vertical-align: top; border: 1px solid {{ $theme['border'] }}; }
+        .parties td + td { border-left: 6px solid {{ $theme['page'] }}; }
+        .section-label { margin-bottom: 5px; color: {{ $theme['accent'] }}; font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: .7px; }
+        .identifier { margin-top: 4px; color: {{ $theme['muted'] }}; font-size: 8px; }
+        .reference { margin: 0 0 14px; padding: 8px 11px; border-left: 4px solid {{ $theme['accent'] }}; background: {{ $theme['surface_alt'] }}; }
         .items-table { width: 100%; }
         .item-table-heading-row { background: {{ $theme['surface_alt'] }}; }
         .item-table-heading { padding: 8px 6px; color: {{ $theme['text'] }}; border-bottom: 2px solid {{ $theme['accent'] }}; font-size: 8px; text-transform: uppercase; }
@@ -63,15 +69,17 @@
         .item-description { color: {{ $theme['muted'] }}; font-size: 8px; }
         .item-cell-table-hr { display: none; }
         .total-display-container { width: 100%; }
-        .total-display-table { width: 43%; margin: 16px 0 15px auto; page-break-inside: avoid; }
+        .total-display-table { width: 43%; margin: 15px 0 12px auto; page-break-inside: avoid; }
         .total-display-table td { padding: 5px 8px; }
         .total-table-attribute-label { color: {{ $theme['muted'] }}; }
         .total-table-attribute-value { text-align: right; color: {{ $theme['text'] }}; font-weight: bold; }
         .total-border-left, .total-border-right { padding: 9px 8px !important; background: {{ $theme['total'] }}; color: #ffffff !important; font-size: 12px; }
-        .notes { margin-top: 15px; padding: 11px 13px; border: 1px solid {{ $theme['border'] }}; background: {{ $theme['surface'] }}; page-break-inside: avoid; }
+        .payment-box { width: 100%; margin-top: 12px; padding: 10px 12px; border: 1px solid {{ $theme['border'] }}; background: {{ $theme['surface'] }}; page-break-inside: avoid; }
+        .payment-box strong { color: {{ $theme['accent'] }}; }
+        .notes { margin-top: 12px; padding: 10px 12px; border: 1px solid {{ $theme['border'] }}; page-break-inside: avoid; }
         .notes-label { margin-bottom: 5px; color: {{ $theme['accent'] }}; font-weight: bold; text-transform: uppercase; }
-        .vat-franchise { margin-top: 14px; padding: 10px 12px; border: 1px dashed {{ $theme['accent'] }}; color: {{ $theme['accent'] }}; font-size: 10px; font-weight: bold; text-align: center; }
-        .footer { margin-top: 20px; padding-top: 9px; border-top: 1px solid {{ $theme['border'] }}; color: {{ $theme['muted'] }}; font-size: 7px; text-align: center; }
+        .vat-franchise { margin-top: 12px; padding: 9px 11px; border: 1px dashed {{ $theme['accent'] }}; color: {{ $theme['accent'] }}; font-size: 9px; font-weight: bold; text-align: center; }
+        .footer { margin-top: 18px; padding-top: 8px; border-top: 1px solid {{ $theme['border'] }}; color: {{ $theme['muted'] }}; font-size: 7px; text-align: center; }
         .text-left { text-align: left; }
         .text-right { text-align: right; }
         .border-0 { border: 0; }
@@ -96,11 +104,16 @@
         <td class="document-title">
             <h1>FACTURE</h1>
             <div class="document-number">N° {{ $invoice->invoice_number }}</div>
-            <div class="meta">
-                Émise le {{ $invoice->formattedInvoiceDate }}<br>
-                Échéance {{ $invoice->formattedDueDate }}
-            </div>
+            <div class="document-status">Document commercial standard</div>
         </td>
+    </tr>
+</table>
+
+<table class="facts">
+    <tr>
+        <td><span class="fact-label">Date d’émission</span><span class="fact-value">{{ $invoice->formattedInvoiceDate }}</span></td>
+        <td><span class="fact-label">Date d’échéance</span><span class="fact-value">{{ $invoice->formattedDueDate }}</span></td>
+        <td><span class="fact-label">Référence</span><span class="fact-value">{{ $invoice->reference_number ?: '—' }}</span></td>
     </tr>
 </table>
 
@@ -110,20 +123,40 @@
             <div class="section-label">Émetteur</div>
             <strong>{{ $invoice->company->name }}</strong><br>
             {!! $company_address !!}
+            <div class="identifier">
+                @if (data_get($invoice, 'company.siren')) SIREN {{ data_get($invoice, 'company.siren') }}<br> @endif
+                @if (data_get($invoice, 'company.siret')) SIRET {{ data_get($invoice, 'company.siret') }}<br> @endif
+                @if (data_get($invoice, 'company.vat_number')) TVA {{ data_get($invoice, 'company.vat_number') }} @endif
+            </div>
         </td>
         <td>
-            <div class="section-label">Client</div>
+            <div class="section-label">Client {{ $customerIsIndividual ? 'particulier' : 'professionnel' }}</div>
             <strong>{{ $invoice->customer->company_name ?: $invoice->customer->name }}</strong><br>
             {!! $billing_address !!}
+            @unless ($customerIsIndividual)
+                <div class="identifier">
+                    @if ($invoice->customer->siren) SIREN {{ $invoice->customer->siren }}<br> @endif
+                    @if ($invoice->customer->siret) SIRET {{ $invoice->customer->siret }}<br> @endif
+                    @if ($invoice->customer->vat_number) TVA {{ $invoice->customer->vat_number }} @endif
+                </div>
+            @endunless
         </td>
     </tr>
 </table>
 
 @if ($invoice->reference_number)
-    <div class="reference"><strong>Référence :</strong> {{ $invoice->reference_number }}</div>
+    <div class="reference"><strong>Objet / référence :</strong> {{ $invoice->reference_number }}</div>
 @endif
 
 @include('app.pdf.invoice.partials.table')
+
+<div class="payment-box">
+    <strong>Règlement</strong><br>
+    Échéance : {{ $invoice->formattedDueDate }}
+    @if ($invoice->due_amount !== null)
+        — Reste à payer : {!! format_money_pdf($invoice->due_amount, $invoice->customer->currency) !!}
+    @endif
+</div>
 
 @if ($isFranchise || blank($invoice->company->vat_number))
     <div class="vat-franchise">TVA non applicable, art. 293 B du CGI</div>
@@ -131,15 +164,16 @@
 
 @if ($notes)
     <div class="notes">
-        <div class="notes-label">Notes</div>
+        <div class="notes-label">Notes, conditions de paiement et mentions complémentaires</div>
         {!! $notes !!}
     </div>
 @endif
 
 <div class="footer">
-    Document généré par AutoFacture — {{ $invoice->company->name }}
-    @if ($invoice->company->siret) — SIRET {{ $invoice->company->siret }} @endif
-    @if ($invoice->company->vat_number) — TVA {{ $invoice->company->vat_number }} @endif
+    {{ $invoice->company->name }}
+    @if (data_get($invoice, 'company.siret')) — SIRET {{ data_get($invoice, 'company.siret') }} @endif
+    @if (data_get($invoice, 'company.vat_number')) — TVA {{ data_get($invoice, 'company.vat_number') }} @endif
+    — Document généré par AutoFacture
 </div>
 </body>
 </html>

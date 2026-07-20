@@ -89,6 +89,7 @@ class CustomerRequest extends FormRequest
                 'siret' => $this->digitsOnly($this->siret),
                 'vat_number' => $this->upperCompact($this->vat_number),
                 'ape_code' => $this->upperCompact($this->ape_code),
+                'electronic_invoicing_email' => $this->normalizeEmail($this->electronic_invoicing_email),
             ]
             : [
                 'company_name' => null,
@@ -96,6 +97,7 @@ class CustomerRequest extends FormRequest
                 'siret' => null,
                 'vat_number' => null,
                 'ape_code' => null,
+                'electronic_invoicing_email' => null,
             ];
 
         $this->merge(array_merge([
@@ -165,5 +167,12 @@ class CustomerRequest extends FormRequest
     private function upperCompact($value)
     {
         return $value === null ? null : strtoupper(preg_replace('/\s+/', '', (string) $value));
+    }
+
+    private function normalizeEmail($value)
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : strtolower($value);
     }
 }

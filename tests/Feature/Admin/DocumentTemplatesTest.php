@@ -37,6 +37,8 @@ it('loads five real invoice and estimate templates', function () {
         ->assertJsonPath('invoiceTemplates.0.name', 'invoice1')
         ->assertJsonPath('invoiceTemplates.0.label', 'Premium AutoFacture')
         ->assertJsonPath('invoiceTemplates.3.name', 'nuit')
+        ->assertJsonPath('invoiceTemplates.3.label', 'Standard universel')
+        ->assertJsonPath('invoiceTemplates.3.theme', 'standard')
         ->assertJsonPath('invoiceTemplates.4.name', 'franchise-tva');
 
     getJson('/api/v1/estimates/templates')
@@ -45,6 +47,8 @@ it('loads five real invoice and estimate templates', function () {
         ->assertJsonPath('estimateTemplates.0.name', 'estimate1')
         ->assertJsonPath('estimateTemplates.0.label', 'Premium AutoFacture')
         ->assertJsonPath('estimateTemplates.3.name', 'nuit')
+        ->assertJsonPath('estimateTemplates.3.label', 'Standard universel')
+        ->assertJsonPath('estimateTemplates.3.theme', 'standard')
         ->assertJsonPath('estimateTemplates.4.name', 'franchise-tva');
 });
 
@@ -72,7 +76,7 @@ it('persists invoice estimate and credit note defaults', function () {
         ))->toBe('minimal');
 });
 
-it('ships the night and VAT franchise PDF views', function () {
+it('ships the standard and VAT franchise PDF views', function () {
     expect(view()->exists('app.pdf.invoice.nuit'))->toBeTrue()
         ->and(view()->exists('app.pdf.invoice.franchise-tva'))->toBeTrue()
         ->and(view()->exists('app.pdf.estimate.nuit'))->toBeTrue()

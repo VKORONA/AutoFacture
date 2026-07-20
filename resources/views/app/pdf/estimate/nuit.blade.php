@@ -1,2 +1,2 @@
-@php($autofactureTheme = 'night')
+@php($autofactureTheme = 'standard')
 @include('app.pdf.shared.autofacture-estimate')

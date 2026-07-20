@@ -24,10 +24,11 @@ return [
             'preview' => 'invoice3.png',
         ],
         [
+            // La clé technique "nuit" est conservée pour ne pas casser les choix déjà enregistrés.
             'name' => 'nuit',
-            'label' => 'Premium Nuit',
-            'description' => 'Contraste sombre haut de gamme pour les documents numériques.',
-            'theme' => 'night',
+            'label' => 'Standard universel',
+            'description' => 'Facture blanche, légère et habituelle, optimisée pour l’impression papier.',
+            'theme' => 'standard',
             'preview' => null,
         ],
         [
@@ -62,10 +63,11 @@ return [
             'preview' => 'estimate3.png',
         ],
         [
+            // La clé technique "nuit" est conservée pour ne pas casser les choix déjà enregistrés.
             'name' => 'nuit',
-            'label' => 'Premium Nuit',
-            'description' => 'Contraste sombre haut de gamme pour les propositions numériques.',
-            'theme' => 'night',
+            'label' => 'Standard universel',
+            'description' => 'Devis blanc, sobre et lisible, adapté à tous les métiers et à l’impression.',
+            'theme' => 'standard',
             'preview' => null,
         ],
         [
