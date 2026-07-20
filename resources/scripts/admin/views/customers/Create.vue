@@ -23,123 +23,178 @@
           <div class="col-span-5 lg:col-span-1">
             <h6 class="text-lg font-semibold">Identité du client</h6>
             <p class="mt-1 text-sm text-gray-500">
-              Les identifiants légaux sont utilisés sur les devis, factures et futurs fichiers Factur-X.
+              Le type de client détermine le circuit de facturation électronique et les informations à demander.
             </p>
           </div>
 
-          <BaseInputGrid class="col-span-5 lg:col-span-4">
-            <BaseInputGroup label="Type de client" required>
-              <BaseMultiselect
-                v-model="customerStore.currentCustomer.customer_type"
-                value-prop="value"
-                label="label"
-                :options="customerTypes"
-                :can-deselect="false"
-                :can-clear="false"
-              />
-            </BaseInputGroup>
+          <div class="col-span-5 lg:col-span-4">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                :class="customerTypeButtonClass('business')"
+                @click="setCustomerType('business')"
+              >
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                  <BaseIcon name="OfficeBuildingIcon" class="h-6 w-6" />
+                </span>
+                <span class="text-left">
+                  <span class="block text-sm font-semibold text-slate-900">Client professionnel</span>
+                  <span class="mt-1 block text-xs leading-5 text-slate-500">
+                    Entreprise, association ou professionnel indépendant.
+                  </span>
+                </span>
+              </button>
 
-            <BaseInputGroup
-              :label="customerStore.currentCustomer.customer_type === 'business' ? 'Nom commercial ou raison sociale' : 'Nom et prénom'"
-              required
-              :error="fieldError('name')"
+              <button
+                type="button"
+                :class="customerTypeButtonClass('individual')"
+                @click="setCustomerType('individual')"
+              >
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                  <BaseIcon name="UserIcon" class="h-6 w-6" />
+                </span>
+                <span class="text-left">
+                  <span class="block text-sm font-semibold text-slate-900">Client particulier</span>
+                  <span class="mt-1 block text-xs leading-5 text-slate-500">
+                    Consommateur final, sans identifiants professionnels.
+                  </span>
+                </span>
+              </button>
+            </div>
+
+            <div
+              class="mt-4 rounded-2xl border p-4"
+              :class="isBusinessCustomer ? 'border-blue-200 bg-blue-50' : 'border-emerald-200 bg-emerald-50'"
             >
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.name"
-                :invalid="v$.currentCustomer.name.$error"
-                @input="v$.currentCustomer.name.$touch()"
-              />
-            </BaseInputGroup>
+              <div class="flex items-start gap-3">
+                <span
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white"
+                  :class="isBusinessCustomer ? 'text-blue-700' : 'text-emerald-700'"
+                >
+                  <BaseIcon :name="isBusinessCustomer ? 'DocumentTextIcon' : 'CheckCircleIcon'" class="h-5 w-5" />
+                </span>
+                <div>
+                  <div class="text-sm font-semibold text-slate-900">Préparation à la facturation électronique</div>
+                  <div class="mt-1 text-sm font-medium" :class="statusTextClass">
+                    {{ electronicInvoicingTitle }}
+                  </div>
+                  <p class="mt-1 text-xs leading-5 text-slate-600">
+                    {{ electronicInvoicingMessage }}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            <BaseInputGroup
-              v-if="customerStore.currentCustomer.customer_type === 'business'"
-              label="Raison sociale complète"
-            >
-              <BaseInput v-model.trim="customerStore.currentCustomer.company_name" />
-            </BaseInputGroup>
+            <BaseInputGrid class="mt-6">
+              <BaseInputGroup
+                :label="isBusinessCustomer ? 'Nom commercial ou raison sociale' : 'Nom et prénom'"
+                required
+                :error="fieldError('name')"
+              >
+                <BaseInput
+                  v-model.trim="customerStore.currentCustomer.name"
+                  :invalid="v$.currentCustomer.name.$error"
+                  @input="v$.currentCustomer.name.$touch()"
+                />
+              </BaseInputGroup>
 
-            <BaseInputGroup label="Contact principal">
-              <BaseInput v-model.trim="customerStore.currentCustomer.contact_name" />
-            </BaseInputGroup>
+              <BaseInputGroup
+                v-if="isBusinessCustomer"
+                label="Raison sociale complète"
+              >
+                <BaseInput v-model.trim="customerStore.currentCustomer.company_name" />
+              </BaseInputGroup>
 
-            <BaseInputGroup label="SIREN" :error="fieldError('siren')">
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.siren"
-                maxlength="9"
-                inputmode="numeric"
-                placeholder="9 chiffres"
-                :invalid="v$.currentCustomer.siren.$error"
-                @input="v$.currentCustomer.siren.$touch()"
-              />
-            </BaseInputGroup>
+              <BaseInputGroup :label="isBusinessCustomer ? 'Contact principal' : 'Contact complémentaire'">
+                <BaseInput v-model.trim="customerStore.currentCustomer.contact_name" />
+              </BaseInputGroup>
 
-            <BaseInputGroup label="SIRET" :error="fieldError('siret')">
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.siret"
-                maxlength="14"
-                inputmode="numeric"
-                placeholder="14 chiffres"
-                :invalid="v$.currentCustomer.siret.$error"
-                @input="v$.currentCustomer.siret.$touch()"
-              />
-            </BaseInputGroup>
+              <template v-if="isBusinessCustomer">
+                <BaseInputGroup label="SIREN" :error="fieldError('siren')">
+                  <BaseInput
+                    v-model.trim="customerStore.currentCustomer.siren"
+                    maxlength="9"
+                    inputmode="numeric"
+                    placeholder="9 chiffres"
+                    :invalid="v$.currentCustomer.siren.$error"
+                    @input="v$.currentCustomer.siren.$touch()"
+                  />
+                </BaseInputGroup>
 
-            <BaseInputGroup label="TVA intracommunautaire">
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.vat_number"
-                placeholder="FR00123456789"
-              />
-            </BaseInputGroup>
+                <BaseInputGroup label="SIRET" :error="fieldError('siret')">
+                  <BaseInput
+                    v-model.trim="customerStore.currentCustomer.siret"
+                    maxlength="14"
+                    inputmode="numeric"
+                    placeholder="14 chiffres"
+                    :invalid="v$.currentCustomer.siret.$error"
+                    @input="v$.currentCustomer.siret.$touch()"
+                  />
+                </BaseInputGroup>
 
-            <BaseInputGroup label="Code APE / NAF">
-              <BaseInput v-model.trim="customerStore.currentCustomer.ape_code" placeholder="4322B" />
-            </BaseInputGroup>
+                <BaseInputGroup label="TVA intracommunautaire">
+                  <BaseInput
+                    v-model.trim="customerStore.currentCustomer.vat_number"
+                    placeholder="FR00123456789"
+                  />
+                </BaseInputGroup>
 
-            <BaseInputGroup :label="$t('customers.email')" :error="fieldError('email')">
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.email"
-                type="email"
-                :invalid="v$.currentCustomer.email.$error"
-                @input="v$.currentCustomer.email.$touch()"
-              />
-            </BaseInputGroup>
+                <BaseInputGroup label="Code APE / NAF">
+                  <BaseInput v-model.trim="customerStore.currentCustomer.ape_code" placeholder="4322B" />
+                </BaseInputGroup>
+              </template>
 
-            <BaseInputGroup label="E-mail de facturation électronique" :error="fieldError('electronic_invoicing_email')">
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.electronic_invoicing_email"
-                type="email"
-                :invalid="v$.currentCustomer.electronic_invoicing_email.$error"
-                @input="v$.currentCustomer.electronic_invoicing_email.$touch()"
-              />
-            </BaseInputGroup>
+              <BaseInputGroup :label="$t('customers.email')" :error="fieldError('email')">
+                <BaseInput
+                  v-model.trim="customerStore.currentCustomer.email"
+                  type="email"
+                  :invalid="v$.currentCustomer.email.$error"
+                  @input="v$.currentCustomer.email.$touch()"
+                />
+              </BaseInputGroup>
 
-            <BaseInputGroup :label="$t('customers.phone')">
-              <BaseInput v-model.trim="customerStore.currentCustomer.phone" />
-            </BaseInputGroup>
+              <BaseInputGroup
+                v-if="isBusinessCustomer"
+                label="E-mail de facturation électronique"
+                :error="fieldError('electronic_invoicing_email')"
+              >
+                <BaseInput
+                  v-model.trim="customerStore.currentCustomer.electronic_invoicing_email"
+                  type="email"
+                  placeholder="facturation@entreprise.fr"
+                  :invalid="v$.currentCustomer.electronic_invoicing_email.$error"
+                  @input="v$.currentCustomer.electronic_invoicing_email.$touch()"
+                />
+              </BaseInputGroup>
 
-            <BaseInputGroup :label="$t('customers.website')" :error="fieldError('website')">
-              <BaseInput
-                v-model.trim="customerStore.currentCustomer.website"
-                type="url"
-                :invalid="v$.currentCustomer.website.$error"
-                @input="v$.currentCustomer.website.$touch()"
-              />
-            </BaseInputGroup>
+              <BaseInputGroup :label="$t('customers.phone')">
+                <BaseInput v-model.trim="customerStore.currentCustomer.phone" />
+              </BaseInputGroup>
 
-            <BaseInputGroup :label="$t('customers.primary_currency')" required :error="fieldError('currency_id')">
-              <BaseMultiselect
-                v-model="customerStore.currentCustomer.currency_id"
-                value-prop="id"
-                label="name"
-                track-by="name"
-                :options="globalStore.currencies"
-                searchable
-                :can-deselect="false"
-                :can-clear="false"
-                :invalid="v$.currentCustomer.currency_id.$error"
-              />
-            </BaseInputGroup>
-          </BaseInputGrid>
+              <BaseInputGroup :label="$t('customers.website')" :error="fieldError('website')">
+                <BaseInput
+                  v-model.trim="customerStore.currentCustomer.website"
+                  type="url"
+                  :invalid="v$.currentCustomer.website.$error"
+                  @input="v$.currentCustomer.website.$touch()"
+                />
+              </BaseInputGroup>
+
+              <BaseInputGroup :label="$t('customers.primary_currency')" required :error="fieldError('currency_id')">
+                <BaseMultiselect
+                  v-model="customerStore.currentCustomer.currency_id"
+                  value-prop="id"
+                  label="name"
+                  track-by="name"
+                  :options="globalStore.currencies"
+                  searchable
+                  :can-deselect="false"
+                  :can-clear="false"
+                  :invalid="v$.currentCustomer.currency_id.$error"
+                />
+              </BaseInputGroup>
+            </BaseInputGrid>
+          </div>
         </section>
 
         <BaseDivider class="mb-8" />
@@ -229,7 +284,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import useVuelidate from '@vuelidate/core'
@@ -255,11 +310,29 @@ const isSaving = ref(false)
 const showPassword = ref(false)
 const isEdit = computed(() => route.name === 'customers.edit')
 const pageTitle = computed(() => isEdit.value ? t('customers.edit_customer') : t('customers.new_customer'))
-
-const customerTypes = [
-  { value: 'business', label: 'Professionnel' },
-  { value: 'individual', label: 'Particulier' },
-]
+const isBusinessCustomer = computed(() => customerStore.currentCustomer.customer_type === 'business')
+const hasProfessionalIdentifier = computed(() => Boolean(
+  customerStore.currentCustomer.siret || customerStore.currentCustomer.vat_number
+))
+const electronicInvoicingTitle = computed(() => {
+  if (!isBusinessCustomer.value) return 'Pas de facturation électronique B2B nécessaire'
+  return hasProfessionalIdentifier.value
+    ? 'Client professionnel prêt pour la facturation électronique'
+    : 'Informations professionnelles à compléter'
+})
+const electronicInvoicingMessage = computed(() => {
+  if (!isBusinessCustomer.value) {
+    return 'Le client recevra une facture PDF standard. La vente B2C restera identifiable pour le e-reporting lorsque celui-ci s’applique à votre entreprise.'
+  }
+  if (hasProfessionalIdentifier.value) {
+    return 'Les informations du client permettront de préparer une facture structurée Factur-X et son acheminement par une plateforme agréée.'
+  }
+  return 'Ajoutez le SIRET ou le numéro de TVA du client pour sécuriser le futur circuit B2B.'
+})
+const statusTextClass = computed(() => {
+  if (!isBusinessCustomer.value) return 'text-emerald-700'
+  return hasProfessionalIdentifier.value ? 'text-blue-700' : 'text-amber-700'
+})
 
 const optionalExactDigits = (length, message) => helpers.withMessage(
   message,
@@ -314,6 +387,36 @@ const v$ = useVuelidate(rules, customerStore)
 
 customerStore.resetCurrentCustomer()
 customerStore.fetchCustomerInitialSettings(isEdit.value)
+
+watch(
+  () => customerStore.currentCustomer.customer_type,
+  (customerType) => {
+    if (customerType !== 'individual') return
+
+    Object.assign(customerStore.currentCustomer, {
+      company_name: '',
+      siren: '',
+      siret: '',
+      vat_number: '',
+      ape_code: '',
+      electronic_invoicing_email: '',
+    })
+  }
+)
+
+function setCustomerType(customerType) {
+  customerStore.currentCustomer.customer_type = customerType
+}
+
+function customerTypeButtonClass(customerType) {
+  const active = customerStore.currentCustomer.customer_type === customerType
+  return [
+    'flex w-full items-start gap-3 rounded-2xl border p-4 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+    active
+      ? 'border-blue-500 bg-blue-50 shadow-sm'
+      : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50',
+  ]
+}
 
 function fieldError(field) {
   const validation = v$.value.currentCustomer[field]
