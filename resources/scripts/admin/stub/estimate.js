@@ -27,6 +27,12 @@ export default function () {
     discount_type: 'fixed',
     discount_val: 0,
     reference_number: null,
+    project_name: '',
+    project_address: '',
+    purchase_order_number: '',
+    project_contact: '',
+    payment_terms_label: '',
+    show_sepa_qr: true,
     discount: 0,
     items: [
       {
