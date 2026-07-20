@@ -73,6 +73,7 @@ jobs:
           retention-days: 7
       - name: Contrôler le format PHP modifié
         run: |
+          set -o pipefail
           vendor/bin/pint --test \
             app/Domain/Payments/SepaQrCodeService.php \
             app/Http/Controllers/V1/Admin/Estimate/CloneEstimateController.php \
@@ -85,7 +86,15 @@ jobs:
             database/migrations/2026_07_20_180000_add_premium_document_fields.php \
             tests/Feature/Admin/DocumentTemplatesAndDuplicationTest.php \
             tests/Feature/Admin/PremiumDocumentRenderingTest.php \
-            tests/Unit/Domain/Payments/SepaQrCodeServiceTest.php
+            tests/Unit/Domain/Payments/SepaQrCodeServiceTest.php 2>&1 | tee pint-premium.log
+      - name: Publier le diagnostic Pint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: premium-pint-diagnostics
+          path: pint-premium.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   frontend:
     name: Premium forms — Vue build
