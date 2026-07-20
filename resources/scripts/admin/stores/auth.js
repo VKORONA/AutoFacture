@@ -13,7 +13,7 @@ export const useAuthStore = (useWindow = false) => {
       status: '',
 
       loginData: {
-        email: '',
+        email: 'admin',
         password: '',
         remember: '',
       },
@@ -30,7 +30,7 @@ export const useAuthStore = (useWindow = false) => {
                   resolve(response)
 
                   setTimeout(() => {
-                    this.loginData.email = ''
+                    this.loginData.email = 'admin'
                     this.loginData.password = ''
                   }, 1000)
                 })
