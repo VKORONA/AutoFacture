@@ -8,17 +8,20 @@ use Illuminate\Http\Request;
 
 class InvoiceTemplatesController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function __invoke(Request $request)
     {
         $this->authorize('viewAny', Invoice::class);
 
-        $invoiceTemplates = Invoice::invoiceTemplates();
+        $invoiceTemplates = collect(config('document-templates.invoices', []))
+            ->map(function (array $template): array {
+                $template['path'] = $template['preview']
+                    ? vite_asset('img/PDF/'.$template['preview'])
+                    : null;
+                unset($template['preview']);
+
+                return $template;
+            })
+            ->values();
 
         return response()->json([
             'invoiceTemplates' => $invoiceTemplates,
