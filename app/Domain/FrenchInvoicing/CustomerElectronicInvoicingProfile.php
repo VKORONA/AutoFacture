@@ -12,6 +12,8 @@ final class CustomerElectronicInvoicingProfile
             return [
                 'customer_category' => 'b2c',
                 'document_mode' => 'standard_pdf',
+                'delivery_channel' => 'direct_customer_delivery',
+                'requires_approved_platform' => false,
                 'e_invoicing_applicable' => false,
                 'e_reporting_applicable' => true,
                 'status' => 'not_applicable_b2c',
@@ -25,6 +27,8 @@ final class CustomerElectronicInvoicingProfile
         return [
             'customer_category' => 'b2b',
             'document_mode' => 'factur_x_ready',
+            'delivery_channel' => 'approved_platform',
+            'requires_approved_platform' => true,
             'e_invoicing_applicable' => true,
             'e_reporting_applicable' => false,
             'status' => $hasBusinessIdentifier ? 'ready' : 'incomplete',
