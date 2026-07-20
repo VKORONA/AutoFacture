@@ -10,6 +10,7 @@ return [
         'estimates' => env('FEATURE_ESTIMATES', true),
         'invoices' => env('FEATURE_INVOICES', true),
         'electronic_invoicing' => env('FEATURE_ELECTRONIC_INVOICING', true),
+        'document_templates' => env('FEATURE_DOCUMENT_TEMPLATES', true),
         'accounting' => env('FEATURE_ACCOUNTING', true),
         'payments' => env('FEATURE_PAYMENTS', true),
         'users' => env('FEATURE_USERS', true),
@@ -61,6 +62,16 @@ return [
             'model' => Invoice::class,
         ],
         [
+            'title' => 'Modèles de documents',
+            'group' => 2,
+            'link' => '/admin/document-templates',
+            'icon' => 'TemplateIcon',
+            'name' => 'Document Templates',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => Invoice::class,
+        ],
+        [
             'title' => 'Comptabilité',
             'group' => 3,
             'link' => '/admin/accounting',
@@ -80,6 +91,7 @@ return [
         'Invoices' => 'invoices',
         'Credit Notes' => 'invoices',
         'Electronic Invoicing' => 'electronic_invoicing',
+        'Document Templates' => 'document_templates',
         'Accounting' => 'accounting',
         'Recurring Invoices' => 'recurring_invoices',
         'Payments' => 'payments',
@@ -119,6 +131,11 @@ return [
         'electronic_invoicing' => [
             'admin/electronic-invoicing*',
             'api/v1/electronic-invoicing*',
+        ],
+        'document_templates' => [
+            'admin/document-templates*',
+            'api/v1/invoices/templates*',
+            'api/v1/estimates/templates*',
         ],
         'accounting' => [
             'admin/accounting*',
