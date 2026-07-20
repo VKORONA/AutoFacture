@@ -207,7 +207,6 @@
 
 <script setup>
 import { debouncedWatch } from '@vueuse/core'
-import moment from 'moment'
 import { reactive, ref, computed, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCustomerStore } from '@/scripts/admin/stores/customer'
@@ -334,8 +333,6 @@ function toggleFilter() {
   if (showFilters.value) clearFilter()
   showFilters.value = !showFilters.value
 }
-
-const date = ref(moment(new Date()).format('YYYY-MM-DD'))
 
 function removeMultipleCustomers() {
   dialogStore
