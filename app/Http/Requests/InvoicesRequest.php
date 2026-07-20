@@ -53,6 +53,12 @@ class InvoicesRequest extends FormRequest
                 'max:100',
                 'regex:/^[A-Za-z0-9_-]+$/',
             ],
+            'project_name' => ['nullable', 'string', 'max:255'],
+            'project_address' => ['nullable', 'string', 'max:500'],
+            'purchase_order_number' => ['nullable', 'string', 'max:100'],
+            'project_contact' => ['nullable', 'string', 'max:255'],
+            'payment_terms_label' => ['nullable', 'string', 'max:255'],
+            'show_sepa_qr' => ['sometimes', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
             'items.*' => ['required', 'array'],
             'items.*.description' => ['nullable', 'string'],
@@ -112,6 +118,7 @@ class InvoicesRequest extends FormRequest
                 'base_tax' => (int) round((float) $this->input('tax') * $exchangeRate),
                 'base_due_amount' => (int) round((float) $this->input('total') * $exchangeRate),
                 'currency_id' => $customer->currency_id,
+                'show_sepa_qr' => $this->boolean('show_sepa_qr', true),
             ])
             ->toArray();
     }
