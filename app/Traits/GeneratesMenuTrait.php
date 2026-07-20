@@ -24,6 +24,11 @@ trait GeneratesMenuTrait
                 $configuredMenu,
                 config('autofacture.additional_main_menu', []),
             );
+        } elseif ($key === 'setting_menu') {
+            $configuredMenu = array_merge(
+                $configuredMenu,
+                config('autofacture.additional_setting_menu', []),
+            );
         }
 
         foreach ($configuredMenu as $data) {
