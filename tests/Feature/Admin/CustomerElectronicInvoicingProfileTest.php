@@ -91,3 +91,27 @@ it('removes professional identifiers when a private customer is submitted', func
         ->and($customer->ape_code)->toBeNull()
         ->and($customer->electronic_invoicing_email)->toBeNull();
 });
+
+it('filters the customer list by professional or private type', function () {
+    Customer::factory()->create([
+        'company_id' => $this->company->id,
+        'name' => 'Client professionnel test',
+        'customer_type' => 'business',
+    ]);
+    Customer::factory()->create([
+        'company_id' => $this->company->id,
+        'name' => 'Client particulier test',
+        'customer_type' => 'individual',
+    ]);
+
+    getJson('/api/v1/customers?customer_type=individual&limit=all')
+        ->assertOk()
+        ->assertJsonFragment([
+            'name' => 'Client particulier test',
+            'customer_type' => 'individual',
+        ])
+        ->assertJsonMissing([
+            'name' => 'Client professionnel test',
+            'customer_type' => 'business',
+        ]);
+});
