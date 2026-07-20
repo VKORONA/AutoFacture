@@ -3,6 +3,7 @@
 use Crater\Http\Controllers\V1\Admin\Accounting\AccountingController;
 use Crater\Http\Controllers\V1\Admin\CreditNote\CreditNotesController;
 use Crater\Http\Controllers\V1\Admin\ElectronicInvoicing\ElectronicInvoiceConnectionController;
+use Crater\Http\Controllers\V1\Admin\Estimate\CloneEstimateController;
 use Crater\Http\Controllers\V1\Admin\Estimate\EstimateAssetController;
 use Crater\Http\Controllers\V1\Admin\Invoice\FinalizeInvoiceController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,9 @@ Route::prefix('v1')
 
         Route::get('/credit-notes/{creditNote}', [CreditNotesController::class, 'show'])
             ->name('credit-notes.show');
+
+        Route::post('/estimates/{estimate}/clone', CloneEstimateController::class)
+            ->name('estimates.clone');
 
         Route::prefix('estimate-assets')->group(function (): void {
             Route::post('/photos', [EstimateAssetController::class, 'storePhoto'])

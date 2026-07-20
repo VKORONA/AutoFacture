@@ -15,7 +15,7 @@ class EstimateTemplatesController extends Controller
         $estimateTemplates = collect(config('document-templates.estimates', []))
             ->map(function (array $template): array {
                 $template['path'] = $template['preview']
-                    ? vite_asset('img/PDF/'.$template['preview'])
+                    ? asset($template['preview'])
                     : null;
                 unset($template['preview']);
 

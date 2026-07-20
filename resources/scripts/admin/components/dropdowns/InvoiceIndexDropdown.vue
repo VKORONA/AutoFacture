@@ -102,13 +102,13 @@
 
     <BaseDropdownItem
       v-if="userStore.hasAbilities(abilities.CREATE_INVOICE)"
-      @click="cloneInvoiceData(row)"
+      @click="duplicateInvoice(row)"
     >
       <BaseIcon
-        name="DocumentTextIcon"
-        class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500"
+        name="DocumentDuplicateIcon"
+        class="w-5 h-5 mr-3 text-blue-500 group-hover:text-blue-600"
       />
-      {{ $t('invoices.clone_invoice') }}
+      Dupliquer
     </BaseDropdownItem>
 
     <BaseDropdownItem
@@ -231,12 +231,13 @@ async function removeInvoice(id) {
     })
 }
 
-async function cloneInvoiceData(data) {
+async function duplicateInvoice(data) {
   dialogStore
     .openDialog({
-      title: t('general.are_you_sure'),
-      message: t('invoices.confirm_clone'),
-      yesLabel: t('general.ok'),
+      title: 'Dupliquer cette facture ?',
+      message:
+        'Une nouvelle facture brouillon reprendra les lignes, prix, TVA, notes et modèle. Vous pourrez remplacer le client avant de l’enregistrer définitivement.',
+      yesLabel: 'Dupliquer',
       noLabel: t('general.cancel'),
       variant: 'primary',
       hideNoButton: false,
@@ -245,7 +246,10 @@ async function cloneInvoiceData(data) {
     .then((res) => {
       if (res) {
         invoiceStore.cloneInvoice(data).then((response) => {
-          router.push(`/admin/invoices/${response.data.data.id}/edit`)
+          router.push({
+            path: `/admin/invoices/${response.data.data.id}/edit`,
+            query: { duplicated_from: data.id },
+          })
         })
       }
     })
@@ -283,7 +287,6 @@ async function sendInvoice(invoice) {
 
 function copyPdfUrl() {
   const pdfUrl = `${window.location.origin}/invoices/pdf/${props.row.unique_hash}`
-
   utils.copyTextToClipboard(pdfUrl)
 
   notificationStore.showNotification({
