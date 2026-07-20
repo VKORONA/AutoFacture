@@ -4,6 +4,7 @@ use Crater\Models\Estimate;
 use Crater\Models\EstimateItem;
 use Crater\Models\Tax;
 use Crater\Models\User;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Sanctum\Sanctum;
 
@@ -11,6 +12,7 @@ use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 
 beforeEach(function () {
+    $this->withoutMiddleware(ThrottleRequests::class);
     Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
     Artisan::call('db:seed', ['--class' => 'DemoSeeder', '--force' => true]);
     $this->user = User::findOrFail(1);
