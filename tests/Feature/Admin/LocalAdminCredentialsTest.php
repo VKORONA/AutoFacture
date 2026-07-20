@@ -1,6 +1,7 @@
 <?php
 
 use Crater\Models\User;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 
@@ -8,6 +9,7 @@ use function Pest\Laravel\assertAuthenticatedAs;
 use function Pest\Laravel\postJson;
 
 beforeEach(function () {
+    $this->withoutMiddleware(ThrottleRequests::class);
     Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
     Artisan::call('db:seed', ['--class' => 'DemoSeeder', '--force' => true]);
 });
