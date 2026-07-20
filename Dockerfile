@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2-dev \
     libzip-dev \
     mariadb-client \
+    qrencode \
     unzip \
     zip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
