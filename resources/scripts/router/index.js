@@ -9,6 +9,8 @@ import AdminRoutes from '@/scripts/admin/admin-router'
 import CustomerRoutes from '@/scripts/customer/customer-router'
 
 const LayoutBasic = () => import('@/scripts/admin/layouts/LayoutBasic.vue')
+const SettingsIndex = () =>
+  import('@/scripts/admin/views/settings/SettingsIndex.vue')
 const ElectronicInvoicing = () =>
   import('@/scripts/admin/views/electronic-invoicing/Index.vue')
 const Accounting = () => import('@/scripts/admin/views/accounting/Index.vue')
@@ -49,18 +51,25 @@ const AdditionalAdminRoutes = [
     ],
   },
   {
-    path: '/admin/document-templates',
+    path: '/admin/settings/document-templates',
     component: LayoutBasic,
     meta: { requiresAuth: true },
     children: [
       {
         path: '',
-        name: 'document-templates.index',
-        meta: {
-          requiresAuth: true,
-          ability: abilities.VIEW_INVOICE,
-        },
-        component: DocumentTemplates,
+        component: SettingsIndex,
+        meta: { requiresAuth: true },
+        children: [
+          {
+            path: '',
+            name: 'document-templates.index',
+            meta: {
+              requiresAuth: true,
+              ability: abilities.VIEW_INVOICE,
+            },
+            component: DocumentTemplates,
+          },
+        ],
       },
     ],
   },
