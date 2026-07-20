@@ -64,6 +64,8 @@ it('maps every selectable design to a real AutoFacture PDF renderer', function (
 it('ships the approved premium matrix with SEPA, VAT and legal sections', function () {
     $invoiceView = file_get_contents(resource_path('views/app/pdf/shared/autofacture-premium-invoice.blade.php'));
     $estimateView = file_get_contents(resource_path('views/app/pdf/shared/autofacture-premium-estimate.blade.php'));
+    $invoiceEntry = file_get_contents(resource_path('views/app/pdf/invoice/invoice1.blade.php'));
+    $estimateEntry = file_get_contents(resource_path('views/app/pdf/estimate/estimate1.blade.php'));
 
     expect($invoiceView)
         ->toContain('SepaQrCodeService')
@@ -77,7 +79,14 @@ it('ships the approved premium matrix with SEPA, VAT and legal sections', functi
         ->toContain('QR coordonnées bancaires')
         ->toContain('Acceptation du client')
         ->toContain('TVA non applicable, art. 293 B du CGI')
-        ->toContain('Matrice Premium AutoFacture verrouillée');
+        ->toContain('Matrice Premium AutoFacture verrouillée')
+        ->and($invoiceEntry)
+        ->toContain('project_name')
+        ->toContain('purchase_order_number')
+        ->toContain('payment_terms')
+        ->and($estimateEntry)
+        ->toContain('project_address')
+        ->toContain('project_contact');
 });
 
 it('duplicates an estimate as a new editable draft without copying attachments', function () {
@@ -88,6 +97,12 @@ it('duplicates an estimate as a new editable draft without copying attachments',
             'company_id' => $this->company->id,
             'status' => Estimate::STATUS_ACCEPTED,
             'reference_number' => 'CHANTIER-DEMO',
+            'project_name' => 'Résidence Les Alizés',
+            'project_address' => '8 rue des Mouettes, La Rochelle',
+            'purchase_order_number' => 'BC-2026-019',
+            'project_contact' => 'M. Julien Martin',
+            'payment_terms_label' => '30 jours fin de mois',
+            'show_sepa_qr' => true,
             'notes' => 'Contenu réutilisable',
             'annex_title' => 'Annexe source',
             'annex_notes' => 'Précisions techniques',
@@ -101,6 +116,8 @@ it('duplicates an estimate as a new editable draft without copying attachments',
         ->assertJsonPath('data.status', Estimate::STATUS_DRAFT)
         ->assertJsonPath('data.customer_id', $source->customer_id)
         ->assertJsonPath('data.reference_number', 'CHANTIER-DEMO')
+        ->assertJsonPath('data.project_name', 'Résidence Les Alizés')
+        ->assertJsonPath('data.purchase_order_number', 'BC-2026-019')
         ->assertJsonPath('data.notes', 'Contenu réutilisable');
 
     $duplicate = Estimate::with(['items', 'taxes'])->findOrFail($response->json('data.id'));
@@ -110,7 +127,11 @@ it('duplicates an estimate as a new editable draft without copying attachments',
         ->and($duplicate->taxes)->toHaveCount(1)
         ->and((bool) $duplicate->include_photo_annex)->toBeFalse()
         ->and($duplicate->annex_title)->toBe('Annexe source')
-        ->and($duplicate->annex_notes)->toBe('Précisions techniques');
+        ->and($duplicate->annex_notes)->toBe('Précisions techniques')
+        ->and($duplicate->project_address)->toBe('8 rue des Mouettes, La Rochelle')
+        ->and($duplicate->project_contact)->toBe('M. Julien Martin')
+        ->and($duplicate->payment_terms_label)->toBe('30 jours fin de mois')
+        ->and((bool) $duplicate->show_sepa_qr)->toBeTrue();
 });
 
 it('keeps duplicate actions explicit and opens an editable customer form', function () {
@@ -121,6 +142,6 @@ it('keeps duplicate actions explicit and opens an editable customer form', funct
 
     expect($invoiceDropdown)->toContain('Dupliquer')->toContain('duplicated_from')->toContain('/edit')
         ->and($estimateDropdown)->toContain('Dupliquer')->toContain('duplicated_from')->toContain('/edit')
-        ->and($invoiceFields)->toContain('BaseCustomerSelectPopup')
-        ->and($estimateFields)->toContain('BaseCustomerSelectPopup');
+        ->and($invoiceFields)->toContain('BaseCustomerSelectPopup')->toContain('DocumentPresentationFields')
+        ->and($estimateFields)->toContain('BaseCustomerSelectPopup')->toContain('DocumentPresentationFields');
 });
