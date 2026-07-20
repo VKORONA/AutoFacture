@@ -1,6 +1,5 @@
 <template>
   <BasePage>
-    <!-- Page Header Section -->
     <BasePageHeader :title="$t('customers.title')">
       <BaseBreadcrumb>
         <BaseBreadcrumbItem :title="$t('general.home')" to="dashboard" />
@@ -52,6 +51,18 @@
         />
       </BaseInputGroup>
 
+      <BaseInputGroup label="Type de client" class="text-left">
+        <BaseMultiselect
+          v-model="filters.customer_type"
+          value-prop="value"
+          label="label"
+          :options="customerTypeOptions"
+          :can-deselect="true"
+          :can-clear="true"
+          placeholder="Tous les clients"
+        />
+      </BaseInputGroup>
+
       <BaseInputGroup :label="$t('customers.contact_name')" class="text-left">
         <BaseInput
           v-model="filters.contact_name"
@@ -92,23 +103,14 @@
       </template>
     </BaseEmptyPlaceholder>
 
-    <!-- Total no of Customers in Table -->
     <div v-show="!showEmptyScreen" class="relative table-container">
       <div class="relative flex items-center justify-end h-5">
         <BaseDropdown v-if="customerStore.selectedCustomers.length">
           <template #activator>
             <span
-              class="
-                flex
-                text-sm
-                font-medium
-                cursor-pointer
-                select-none
-                text-primary-400
-              "
+              class="flex text-sm font-medium cursor-pointer select-none text-primary-400"
             >
               {{ $t('general.actions') }}
-
               <BaseIcon name="ChevronDownIcon" />
             </span>
           </template>
@@ -119,14 +121,12 @@
         </BaseDropdown>
       </div>
 
-      <!-- Table Section -->
       <BaseTable
         ref="tableComponent"
         class="mt-3"
         :data="fetchData"
         :columns="customerColumns"
       >
-        <!-- Select All Checkbox -->
         <template #header>
           <div class="absolute z-10 items-center left-6 top-2.5 select-none">
             <BaseCheckbox
@@ -165,10 +165,21 @@
           </router-link>
         </template>
 
-        <template #cell-phone="{ row }">
-          <span>
-            {{ row.data.phone ? row.data.phone : '-' }}
+        <template #cell-customer_type="{ row }">
+          <span
+            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+            :class="
+              row.data.customer_type === 'individual'
+                ? 'bg-violet-100 text-violet-800'
+                : 'bg-blue-100 text-blue-800'
+            "
+          >
+            {{ row.data.customer_type === 'individual' ? 'Particulier' : 'Professionnel' }}
           </span>
+        </template>
+
+        <template #cell-phone="{ row }">
+          <span>{{ row.data.phone ? row.data.phone : '-' }}</span>
         </template>
 
         <template #cell-due_amount="{ row }">
@@ -197,11 +208,10 @@
 <script setup>
 import { debouncedWatch } from '@vueuse/core'
 import moment from 'moment'
-import { reactive, ref, inject, computed, onUnmounted } from 'vue'
+import { reactive, ref, computed, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCustomerStore } from '@/scripts/admin/stores/customer'
 import { useDialogStore } from '@/scripts/stores/dialog'
-import { useCompanyStore } from '@/scripts/admin/stores/company'
 import { useUserStore } from '@/scripts/admin/stores/user'
 
 import abilities from '@/scripts/admin/stub/abilities'
@@ -209,18 +219,23 @@ import abilities from '@/scripts/admin/stub/abilities'
 import CustomerDropdown from '@/scripts/admin/components/dropdowns/CustomerIndexDropdown.vue'
 import AstronautIcon from '@/scripts/components/icons/empty/AstronautIcon.vue'
 
-const companyStore = useCompanyStore()
 const dialogStore = useDialogStore()
 const customerStore = useCustomerStore()
 const userStore = useUserStore()
 
-let tableComponent = ref(null)
-let showFilters = ref(false)
-let isFetchingInitialData = ref(true)
+const tableComponent = ref(null)
+const showFilters = ref(false)
+const isFetchingInitialData = ref(true)
 const { t } = useI18n()
 
-let filters = reactive({
+const customerTypeOptions = [
+  { value: 'business', label: 'Professionnel' },
+  { value: 'individual', label: 'Particulier' },
+]
+
+const filters = reactive({
   display_name: '',
+  customer_type: null,
   contact_name: '',
   phone: '',
 })
@@ -231,67 +246,47 @@ const showEmptyScreen = computed(
 
 const selectField = computed({
   get: () => customerStore.selectedCustomers,
-  set: (value) => {
-    return customerStore.selectCustomer(value)
-  },
+  set: (value) => customerStore.selectCustomer(value),
 })
 
 const selectAllFieldStatus = computed({
   get: () => customerStore.selectAllField,
-  set: (value) => {
-    return customerStore.setSelectAllState(value)
-  },
+  set: (value) => customerStore.setSelectAllState(value),
 })
 
-const customerColumns = computed(() => {
-  return [
-    {
-      key: 'status',
-      thClass: 'extra w-10 pr-0',
-      sortable: false,
-      tdClass: 'font-medium text-gray-900 pr-0',
-    },
-    {
-      key: 'name',
-      label: t('customers.name'),
-      thClass: 'extra',
-      tdClass: 'font-medium text-gray-900',
-    },
-    { key: 'phone', label: t('customers.phone') },
-    { key: 'due_amount', label: t('customers.amount_due') },
-    {
-      key: 'created_at',
-      label: t('items.added_on'),
-    },
-    {
-      key: 'actions',
-      tdClass: 'text-right text-sm font-medium pl-0',
-      thClass: 'pl-0',
-      sortable: false,
-    },
-  ]
-})
-
-debouncedWatch(
-  filters,
-  () => {
-    setFilters()
+const customerColumns = computed(() => [
+  {
+    key: 'status',
+    thClass: 'extra w-10 pr-0',
+    sortable: false,
+    tdClass: 'font-medium text-gray-900 pr-0',
   },
-  { debounce: 500 }
-)
+  {
+    key: 'name',
+    label: t('customers.name'),
+    thClass: 'extra',
+    tdClass: 'font-medium text-gray-900',
+  },
+  { key: 'customer_type', label: 'Type' },
+  { key: 'phone', label: t('customers.phone') },
+  { key: 'due_amount', label: t('customers.amount_due') },
+  { key: 'created_at', label: t('items.added_on') },
+  {
+    key: 'actions',
+    tdClass: 'text-right text-sm font-medium pl-0',
+    thClass: 'pl-0',
+    sortable: false,
+  },
+])
+
+debouncedWatch(filters, refreshTable, { debounce: 500 })
 
 onUnmounted(() => {
-  if (customerStore.selectAllField) {
-    customerStore.selectAllCustomers()
-  }
+  if (customerStore.selectAllField) customerStore.selectAllCustomers()
 })
 
 function refreshTable() {
-  tableComponent.value.refresh()
-}
-
-function setFilters() {
-  refreshTable()
+  tableComponent.value?.refresh()
 }
 
 function hasAtleastOneAbility() {
@@ -302,9 +297,10 @@ function hasAtleastOneAbility() {
   ])
 }
 
-async function fetchData({ page, filter, sort }) {
-  let data = {
+async function fetchData({ page, sort }) {
+  const data = {
     display_name: filters.display_name,
+    customer_type: filters.customer_type,
     contact_name: filters.contact_name,
     phone: filters.phone,
     orderByField: sort.fieldName || 'created_at',
@@ -313,8 +309,9 @@ async function fetchData({ page, filter, sort }) {
   }
 
   isFetchingInitialData.value = true
-  let response = await customerStore.fetchCustomers(data)
+  const response = await customerStore.fetchCustomers(data)
   isFetchingInitialData.value = false
+
   return {
     data: response.data.data,
     pagination: {
@@ -328,21 +325,17 @@ async function fetchData({ page, filter, sort }) {
 
 function clearFilter() {
   filters.display_name = ''
+  filters.customer_type = null
   filters.contact_name = ''
   filters.phone = ''
 }
 
 function toggleFilter() {
-  if (showFilters.value) {
-    clearFilter()
-  }
-
+  if (showFilters.value) clearFilter()
   showFilters.value = !showFilters.value
 }
 
-let date = ref(new Date())
-
-date.value = moment(date).format('YYYY-MM-DD')
+const date = ref(moment(new Date()).format('YYYY-MM-DD'))
 
 function removeMultipleCustomers() {
   dialogStore
@@ -356,13 +349,10 @@ function removeMultipleCustomers() {
       size: 'lg',
     })
     .then((res) => {
-      if (res) {
-        customerStore.deleteMultipleCustomers().then((response) => {
-          if (response.data) {
-            refreshTable()
-          }
-        })
-      }
+      if (!res) return
+      customerStore.deleteMultipleCustomers().then((response) => {
+        if (response.data) refreshTable()
+      })
     })
 }
 </script>
