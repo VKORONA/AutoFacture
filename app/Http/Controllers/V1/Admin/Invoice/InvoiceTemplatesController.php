@@ -15,7 +15,7 @@ class InvoiceTemplatesController extends Controller
         $invoiceTemplates = collect(config('document-templates.invoices', []))
             ->map(function (array $template): array {
                 $template['path'] = $template['preview']
-                    ? vite_asset('img/PDF/'.$template['preview'])
+                    ? asset($template['preview'])
                     : null;
                 unset($template['preview']);
 
