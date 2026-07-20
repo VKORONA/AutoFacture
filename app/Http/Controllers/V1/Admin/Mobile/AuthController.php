@@ -14,11 +14,17 @@ class AuthController extends Controller
 {
     public function login(LoginRequest $request)
     {
-        $user = User::where('email', $request->username)->first();
+        $identifier = trim((string) $request->username);
+
+        if (app()->environment(['local', 'testing']) && strcasecmp($identifier, 'admin') === 0) {
+            $identifier = 'admin@autofacture.local';
+        }
+
+        $user = User::where('email', $identifier)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'username' => ['Les identifiants fournis sont incorrects.'],
             ]);
         }
 
