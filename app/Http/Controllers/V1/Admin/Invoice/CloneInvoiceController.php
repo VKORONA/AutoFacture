@@ -24,8 +24,8 @@ class CloneInvoiceController extends Controller
             $date = Carbon::now();
             $dueDate = null;
 
-            $serial = (new SerialNumberFormatter())
-                ->setModel(new Invoice())
+            $serial = (new SerialNumberFormatter)
+                ->setModel(new Invoice)
                 ->setCompany($invoice->company_id)
                 ->setCustomer($invoice->customer_id)
                 ->setNextNumbers();
