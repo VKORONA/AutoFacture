@@ -38,8 +38,8 @@ class CloneEstimateController extends Controller
                 $expiryDate = Carbon::now()->addDays($expiryDays)->format('Y-m-d');
             }
 
-            $serial = (new SerialNumberFormatter())
-                ->setModel(new Estimate())
+            $serial = (new SerialNumberFormatter)
+                ->setModel(new Estimate)
                 ->setCompany($companyId)
                 ->setCustomer($estimate->customer_id)
                 ->setNextNumbers();
