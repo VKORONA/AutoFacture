@@ -1,0 +1,109 @@
+name: AutoFacture Premium Documents CI
+
+on:
+  push:
+    branches:
+      - feature/exact-premium-invoice-estimate
+  workflow_dispatch:
+
+concurrency:
+  group: autofacture-premium-documents-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Premium PDFs — Laravel 12 PHP 8.4
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: autofacture_test
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: autofacture_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SESSION_DRIVER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, intl, openssl, pdo_mysql, tokenizer, xml, zip
+          coverage: none
+      - name: Installer qrencode
+        run: sudo apt-get update && sudo apt-get install -y qrencode
+      - name: Préparer Laravel
+        run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+      - name: Migrer et tester
+        run: |
+          php artisan migrate:fresh --force
+          php artisan test
+      - name: Contrôler le format PHP modifié
+        run: |
+          vendor/bin/pint --test \
+            app/Domain/Payments/SepaQrCodeService.php \
+            app/Http/Controllers/V1/Admin/Estimate/CloneEstimateController.php \
+            app/Http/Controllers/V1/Admin/Estimate/ConvertEstimateController.php \
+            app/Http/Controllers/V1/Admin/Invoice/CloneInvoiceController.php \
+            app/Http/Requests/EstimatesRequest.php \
+            app/Http/Requests/InvoicesRequest.php \
+            app/Http/Resources/EstimateResource.php \
+            app/Http/Resources/InvoiceResource.php \
+            database/migrations/2026_07_20_180000_add_premium_document_fields.php \
+            tests/Feature/Admin/DocumentTemplatesAndDuplicationTest.php \
+            tests/Feature/Admin/PremiumDocumentRenderingTest.php \
+            tests/Unit/Domain/Payments/SepaQrCodeServiceTest.php
+
+  frontend:
+    name: Premium forms — Vue build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, intl, openssl, tokenizer, xml, zip
+          coverage: none
+      - run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+      - name: Installer et construire
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npx eslint \
+            resources/scripts/admin/components/estimate-invoice-common/DocumentPresentationFields.vue \
+            resources/scripts/admin/stub/estimate.js \
+            resources/scripts/admin/stub/invoice.js \
+            resources/scripts/admin/views/estimates/create/EstimateCreateBasicFields.vue \
+            resources/scripts/admin/views/invoices/create/InvoiceCreateBasicFields.vue
+          npm run build
+
+  docker:
+    name: Docker avec QR SEPA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker compose build app
