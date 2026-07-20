@@ -90,8 +90,8 @@ final class SepaQrCodeService
                 '1',
                 '-o',
                 '-',
-                $payload,
             ]);
+            $process->setInput($payload);
             $process->setTimeout(5);
             $process->run();
 
