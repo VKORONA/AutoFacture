@@ -2,8 +2,6 @@
 
 use Crater\Models\Estimate;
 use Crater\Models\EstimateItem;
-use Crater\Models\Invoice;
-use Crater\Models\InvoiceItem;
 use Crater\Models\Tax;
 use Crater\Models\User;
 use Illuminate\Support\Facades\Artisan;
@@ -36,13 +34,17 @@ it('returns five real invoice and estimate previews from public assets', functio
         ->assertJsonCount(5, 'estimateTemplates');
 
     foreach ($invoiceResponse->json('invoiceTemplates') as $template) {
+        $relativePath = ltrim((string) parse_url($template['path'], PHP_URL_PATH), '/');
+
         expect($template['path'])->toContain('/img/document-templates/template-')
-            ->and(public_path(parse_url($template['path'], PHP_URL_PATH)))->toBeFile();
+            ->and(public_path($relativePath))->toBeFile();
     }
 
     foreach ($estimateResponse->json('estimateTemplates') as $template) {
+        $relativePath = ltrim((string) parse_url($template['path'], PHP_URL_PATH), '/');
+
         expect($template['path'])->toContain('/img/document-templates/template-')
-            ->and(public_path(parse_url($template['path'], PHP_URL_PATH)))->toBeFile();
+            ->and(public_path($relativePath))->toBeFile();
     }
 });
 
@@ -55,20 +57,18 @@ it('maps every selectable design to a real AutoFacture PDF renderer', function (
         'franchise-tva' => 'franchise',
     ];
 
-    $estimateThemes = $invoiceThemes;
-
     foreach ($invoiceThemes as $template => $theme) {
         $view = file_get_contents(resource_path("views/app/pdf/invoice/{$template}.blade.php"));
         expect($view)
             ->toContain("autofactureTheme = '{$theme}'")
-            ->toContain("app.pdf.shared.autofacture-invoice");
+            ->toContain('app.pdf.shared.autofacture-invoice');
     }
 
-    foreach ($estimateThemes as $template => $theme) {
+    foreach ($invoiceThemes as $template => $theme) {
         $view = file_get_contents(resource_path("views/app/pdf/estimate/{$template}.blade.php"));
         expect($view)
             ->toContain("autofactureTheme = '{$theme}'")
-            ->toContain("app.pdf.shared.autofacture-estimate");
+            ->toContain('app.pdf.shared.autofacture-estimate');
     }
 });
 
@@ -109,6 +109,8 @@ it('duplicates an estimate as a new editable draft without copying attachments',
 it('keeps duplicate actions explicit and opens an editable customer form', function () {
     $invoiceDropdown = file_get_contents(resource_path('scripts/admin/components/dropdowns/InvoiceIndexDropdown.vue'));
     $estimateDropdown = file_get_contents(resource_path('scripts/admin/components/dropdowns/EstimateIndexDropdown.vue'));
+    $invoiceFields = file_get_contents(resource_path('scripts/admin/views/invoices/create/InvoiceCreateBasicFields.vue'));
+    $estimateFields = file_get_contents(resource_path('scripts/admin/views/estimates/create/EstimateCreateBasicFields.vue'));
 
     expect($invoiceDropdown)
         ->toContain('Dupliquer')
@@ -117,5 +119,9 @@ it('keeps duplicate actions explicit and opens an editable customer form', funct
         ->and($estimateDropdown)
         ->toContain('Dupliquer')
         ->toContain('duplicated_from')
-        ->toContain('/edit');
+        ->toContain('/edit')
+        ->and($invoiceFields)
+        ->toContain('BaseCustomerSelectPopup')
+        ->and($estimateFields)
+        ->toContain('BaseCustomerSelectPopup');
 });
