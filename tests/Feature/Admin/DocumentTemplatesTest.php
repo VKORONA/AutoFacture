@@ -20,6 +20,16 @@ beforeEach(function () {
     Sanctum::actingAs($this->user, ['*']);
 });
 
+it('places document templates inside billing settings', function () {
+    $menuItem = collect(config('autofacture.additional_setting_menu'))
+        ->firstWhere('name', 'Document Templates');
+
+    expect($menuItem)->not->toBeNull()
+        ->and($menuItem['group'])->toBe('Facturation & Devis')
+        ->and($menuItem['link'])->toBe('/admin/settings/document-templates')
+        ->and(config('autofacture.settings_features.document_templates'))->toBeTrue();
+});
+
 it('loads five real invoice and estimate templates', function () {
     getJson('/api/v1/invoices/templates')
         ->assertOk()
