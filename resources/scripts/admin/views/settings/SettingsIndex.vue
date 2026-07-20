@@ -24,8 +24,8 @@
       />
     </div>
 
-    <div class="flex">
-      <div class="hidden mt-1 xl:block min-w-[240px]">
+    <div class="flex min-w-0 items-start gap-6 pb-12">
+      <div class="hidden mt-1 shrink-0 xl:block min-w-[240px]">
         <BaseList>
           <BaseListItem
             v-for="(menuItem, index) in globalStore.settingMenu"
@@ -43,7 +43,7 @@
         </BaseList>
       </div>
 
-      <div class="w-full overflow-hidden">
+      <div class="min-w-0 flex-1 overflow-visible">
         <RouterView />
       </div>
     </div>
@@ -51,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watchEffect, computed } from 'vue'
+import { ref, watchEffect, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGlobalStore } from '@/scripts/admin/stores/global'
 import BaseList from '@/scripts/components/list/BaseList.vue'
@@ -59,7 +59,7 @@ import BaseListItem from '@/scripts/components/list/BaseListItem.vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
-let currentSetting = ref({})
+const currentSetting = ref({})
 
 const globalStore = useGlobalStore()
 const route = useRoute()
