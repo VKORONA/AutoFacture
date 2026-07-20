@@ -1,5 +1,16 @@
 @php
     $autofactureTheme = 'premium';
+
+    // Laravel 12 no longer converts legacy $dates entries reliably. Keep the
+    // premium renderer compatible with existing Invoice models and test data.
+    $rawAttributes = $invoice->getAttributes();
+    foreach (['invoice_date', 'due_date'] as $dateAttribute) {
+        if (filled($rawAttributes[$dateAttribute] ?? null)) {
+            $rawAttributes[$dateAttribute] = \Carbon\Carbon::parse($rawAttributes[$dateAttribute]);
+        }
+    }
+    $invoice->setRawAttributes($rawAttributes, true);
+
     $formatPremiumAddress = static function ($address): string {
         if (! $address) {
             return '';
