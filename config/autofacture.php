@@ -10,7 +10,6 @@ return [
         'estimates' => env('FEATURE_ESTIMATES', true),
         'invoices' => env('FEATURE_INVOICES', true),
         'electronic_invoicing' => env('FEATURE_ELECTRONIC_INVOICING', true),
-        'document_templates' => env('FEATURE_DOCUMENT_TEMPLATES', true),
         'accounting' => env('FEATURE_ACCOUNTING', true),
         'payments' => env('FEATURE_PAYMENTS', true),
         'users' => env('FEATURE_USERS', true),
@@ -26,6 +25,7 @@ return [
         'company_information' => true,
         'preferences' => true,
         'customization' => true,
+        'document_templates' => env('FEATURE_DOCUMENT_TEMPLATES', true),
         'notifications' => true,
         'tax_types' => true,
         'payment_modes' => true,
@@ -62,21 +62,24 @@ return [
             'model' => Invoice::class,
         ],
         [
-            'title' => 'Modèles de documents',
-            'group' => 2,
-            'link' => '/admin/document-templates',
-            'icon' => 'TemplateIcon',
-            'name' => 'Document Templates',
-            'owner_only' => false,
-            'ability' => 'view-invoice',
-            'model' => Invoice::class,
-        ],
-        [
             'title' => 'Comptabilité',
             'group' => 3,
             'link' => '/admin/accounting',
             'icon' => 'CalculatorIcon',
             'name' => 'Accounting',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => Invoice::class,
+        ],
+    ],
+
+    'additional_setting_menu' => [
+        [
+            'title' => 'Modèles de documents',
+            'group' => 'Facturation & Devis',
+            'link' => '/admin/settings/document-templates',
+            'icon' => 'DocumentTextIcon',
+            'name' => 'Document Templates',
             'owner_only' => false,
             'ability' => 'view-invoice',
             'model' => Invoice::class,
@@ -91,7 +94,6 @@ return [
         'Invoices' => 'invoices',
         'Credit Notes' => 'invoices',
         'Electronic Invoicing' => 'electronic_invoicing',
-        'Document Templates' => 'document_templates',
         'Accounting' => 'accounting',
         'Recurring Invoices' => 'recurring_invoices',
         'Payments' => 'payments',
@@ -107,6 +109,7 @@ return [
         'Company information' => 'company_information',
         'Preferences' => 'preferences',
         'Customization' => 'customization',
+        'Document Templates' => 'document_templates',
         'Roles' => 'roles',
         'Exchange Rate Provider' => 'exchange_rate_provider',
         'Notifications' => 'notifications',
@@ -131,11 +134,6 @@ return [
         'electronic_invoicing' => [
             'admin/electronic-invoicing*',
             'api/v1/electronic-invoicing*',
-        ],
-        'document_templates' => [
-            'admin/document-templates*',
-            'api/v1/invoices/templates*',
-            'api/v1/estimates/templates*',
         ],
         'accounting' => [
             'admin/accounting*',
@@ -163,6 +161,11 @@ return [
     ],
 
     'settings_route_patterns' => [
+        'document_templates' => [
+            'admin/settings/document-templates*',
+            'api/v1/invoices/templates*',
+            'api/v1/estimates/templates*',
+        ],
         'roles' => [
             'admin/settings/roles-settings*',
         ],
