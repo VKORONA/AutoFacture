@@ -11,6 +11,10 @@ final class SepaQrCodeService
 {
     public function forInvoice(Invoice $invoice): ?string
     {
+        if ($invoice->show_sepa_qr === false || (int) $invoice->show_sepa_qr === 0) {
+            return null;
+        }
+
         $amount = (int) ($invoice->due_amount ?? $invoice->total ?? 0);
 
         return $this->dataUri(
@@ -22,6 +26,10 @@ final class SepaQrCodeService
 
     public function forEstimate(Estimate $estimate): ?string
     {
+        if ($estimate->show_sepa_qr === false || (int) $estimate->show_sepa_qr === 0) {
+            return null;
+        }
+
         return $this->dataUri(
             $estimate->company,
             null,
