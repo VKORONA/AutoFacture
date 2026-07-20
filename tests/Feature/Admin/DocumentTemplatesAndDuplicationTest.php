@@ -44,13 +44,40 @@ it('maps every selectable design to a real AutoFacture PDF renderer', function (
 
     foreach ($invoiceThemes as $template => $theme) {
         $view = file_get_contents(resource_path("views/app/pdf/invoice/{$template}.blade.php"));
-        expect($view)->toContain("autofactureTheme = '{$theme}'")->toContain('app.pdf.shared.autofacture-invoice');
+        $renderer = $template === 'invoice1'
+            ? 'app.pdf.shared.autofacture-premium-invoice'
+            : 'app.pdf.shared.autofacture-invoice';
+
+        expect($view)->toContain("autofactureTheme = '{$theme}'")->toContain($renderer);
     }
 
     foreach ($estimateThemes as $template => $theme) {
         $view = file_get_contents(resource_path("views/app/pdf/estimate/{$template}.blade.php"));
-        expect($view)->toContain("autofactureTheme = '{$theme}'")->toContain('app.pdf.shared.autofacture-estimate');
+        $renderer = $template === 'estimate1'
+            ? 'app.pdf.shared.autofacture-premium-estimate'
+            : 'app.pdf.shared.autofacture-estimate';
+
+        expect($view)->toContain("autofactureTheme = '{$theme}'")->toContain($renderer);
     }
+});
+
+it('ships the approved premium matrix with SEPA, VAT and legal sections', function () {
+    $invoiceView = file_get_contents(resource_path('views/app/pdf/shared/autofacture-premium-invoice.blade.php'));
+    $estimateView = file_get_contents(resource_path('views/app/pdf/shared/autofacture-premium-estimate.blade.php'));
+
+    expect($invoiceView)
+        ->toContain('SepaQrCodeService')
+        ->toContain('QR code de virement')
+        ->toContain('Net à payer')
+        ->toContain('TVA non applicable, art. 293 B du CGI')
+        ->toContain('Indemnité forfaitaire de 40 €')
+        ->toContain('Matrice Premium AutoFacture verrouillée')
+        ->and($estimateView)
+        ->toContain('SepaQrCodeService')
+        ->toContain('QR coordonnées bancaires')
+        ->toContain('Acceptation du client')
+        ->toContain('TVA non applicable, art. 293 B du CGI')
+        ->toContain('Matrice Premium AutoFacture verrouillée');
 });
 
 it('duplicates an estimate as a new editable draft without copying attachments', function () {
