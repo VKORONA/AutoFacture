@@ -32,6 +32,12 @@ class EstimatesRequest extends FormRequest
             'total' => ['required'],
             'tax' => ['required'],
             'template_name' => ['required'],
+            'project_name' => ['nullable', 'string', 'max:255'],
+            'project_address' => ['nullable', 'string', 'max:500'],
+            'purchase_order_number' => ['nullable', 'string', 'max:100'],
+            'project_contact' => ['nullable', 'string', 'max:255'],
+            'payment_terms_label' => ['nullable', 'string', 'max:255'],
+            'show_sepa_qr' => ['sometimes', 'boolean'],
             'asset_draft_token' => ['nullable', 'uuid'],
             'annex_title' => ['nullable', 'string', 'max:255'],
             'annex_notes' => ['nullable', 'string', 'max:20000'],
@@ -83,6 +89,7 @@ class EstimatesRequest extends FormRequest
                 'base_total' => $this->total * $exchangeRate,
                 'base_tax' => $this->tax * $exchangeRate,
                 'currency_id' => $currency,
+                'show_sepa_qr' => $this->boolean('show_sepa_qr', true),
             ])
             ->toArray();
     }
