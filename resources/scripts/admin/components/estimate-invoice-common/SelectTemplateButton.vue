@@ -13,12 +13,13 @@
       <template #right="slotProps">
         <BaseIcon name="PencilIcon" :class="slotProps.class" />
       </template>
-      {{ store[storeProp].template_name }}
+      {{ currentTemplateLabel }}
     </BaseButton>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useModalStore } from '@/scripts/stores/modal'
 import { useI18n } from 'vue-i18n'
 
@@ -38,16 +39,23 @@ const props = defineProps({
 })
 
 const modalStore = useModalStore()
-
 const { t } = useI18n()
+
+const currentTemplateLabel = computed(() => {
+  const name = props.store?.[props.storeProp]?.template_name
+  const template = props.store?.templates?.find((item) => item.name === name)
+
+  return template?.label || name || t('general.choose_template')
+})
 
 function openTemplateModal() {
   let markAsDefaultDescription = ''
-  if (props.storeProp == 'newEstimate') {
+
+  if (props.storeProp === 'newEstimate') {
     markAsDefaultDescription = t(
       'estimates.mark_as_default_estimate_template_description'
     )
-  } else if (props.storeProp == 'newInvoice') {
+  } else if (props.storeProp === 'newInvoice') {
     markAsDefaultDescription = t(
       'invoices.mark_as_default_invoice_template_description'
     )

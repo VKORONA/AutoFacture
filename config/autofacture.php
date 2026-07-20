@@ -25,6 +25,7 @@ return [
         'company_information' => true,
         'preferences' => true,
         'customization' => true,
+        'document_templates' => env('FEATURE_DOCUMENT_TEMPLATES', true),
         'notifications' => true,
         'tax_types' => true,
         'payment_modes' => true,
@@ -72,6 +73,19 @@ return [
         ],
     ],
 
+    'additional_setting_menu' => [
+        [
+            'title' => 'Modèles de documents',
+            'group' => 'Facturation & Devis',
+            'link' => '/admin/settings/document-templates',
+            'icon' => 'DocumentTextIcon',
+            'name' => 'Document Templates',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => Invoice::class,
+        ],
+    ],
+
     'main_menu_map' => [
         'Dashboard' => 'dashboard',
         'Customers' => 'customers',
@@ -95,6 +109,7 @@ return [
         'Company information' => 'company_information',
         'Preferences' => 'preferences',
         'Customization' => 'customization',
+        'Document Templates' => 'document_templates',
         'Roles' => 'roles',
         'Exchange Rate Provider' => 'exchange_rate_provider',
         'Notifications' => 'notifications',
@@ -146,6 +161,11 @@ return [
     ],
 
     'settings_route_patterns' => [
+        'document_templates' => [
+            'admin/settings/document-templates*',
+            'api/v1/invoices/templates*',
+            'api/v1/estimates/templates*',
+        ],
         'roles' => [
             'admin/settings/roles-settings*',
         ],

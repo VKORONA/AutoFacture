@@ -8,20 +8,23 @@ use Illuminate\Http\Request;
 
 class EstimateTemplatesController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function __invoke(Request $request)
     {
         $this->authorize('viewAny', Estimate::class);
 
-        $estimateTemplates = Estimate::estimateTemplates();
+        $estimateTemplates = collect(config('document-templates.estimates', []))
+            ->map(function (array $template): array {
+                $template['path'] = $template['preview']
+                    ? vite_asset('img/PDF/'.$template['preview'])
+                    : null;
+                unset($template['preview']);
+
+                return $template;
+            })
+            ->values();
 
         return response()->json([
-            'estimateTemplates' => $estimateTemplates
+            'estimateTemplates' => $estimateTemplates,
         ]);
     }
 }

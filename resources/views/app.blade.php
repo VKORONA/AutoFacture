@@ -25,7 +25,7 @@
 </head>
 
 <body
-    class="h-full overflow-hidden bg-gray-100 font-base
+    class="min-h-screen overflow-x-hidden overflow-y-auto bg-gray-100 font-base
     @if(isset($current_theme)) theme-{{ $current_theme }} @else theme-{{get_app_setting('admin_portal_theme') ?? 'crater'}} @endif ">
 
     <!-- Module Scripts -->
@@ -57,12 +57,12 @@
 
         window.login_page_description = "{{$login_page_description}}"
 
-        @endif     
+        @endif
         @if(isset($copyright_text))
 
         window.copyright_text = "{{$copyright_text}}"
 
-        @endif    
+        @endif
 
         window.Crater.start()
     </script>
