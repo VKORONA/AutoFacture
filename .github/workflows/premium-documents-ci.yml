@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feature/exact-premium-invoice-estimate
+  pull_request:
+    branches:
+      - fix/local-admin-credentials
   workflow_dispatch:
 
 concurrency:
