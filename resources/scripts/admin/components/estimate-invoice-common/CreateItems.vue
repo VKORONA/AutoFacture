@@ -169,7 +169,9 @@ function addItem() {
   props.store.addItem()
 
   const item = props.store[props.storeProp].items.at(-1)
-  item.business_activity_type ||= 'service_bic'
+  if (!item.business_activity_type) {
+    item.business_activity_type = 'service_bic'
+  }
 
   if (props.storeProp !== 'newEstimate') return
 
@@ -181,7 +183,9 @@ function syncCatalogClassifications() {
   const catalog = Array.isArray(itemStore.items) ? itemStore.items : []
 
   props.store[props.storeProp].items.forEach((line, index) => {
-    line.business_activity_type ||= 'service_bic'
+    if (!line.business_activity_type) {
+      line.business_activity_type = 'service_bic'
+    }
     if (!line.item_id) return
 
     const product = catalog.find((item) => Number(item.id) === Number(line.item_id))
