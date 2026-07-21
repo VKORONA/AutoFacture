@@ -48,10 +48,11 @@
       </tr>
     </thead>
     <draggable
-      v-model="store[storeProp].items"
+      :model-value="store[storeProp].items"
       item-key="id"
       tag="tbody"
       handle=".handle"
+      @update:model-value="reorderItems"
     >
       <template #item="{ element, index }">
         <Item
@@ -92,10 +93,10 @@
       <label v-for="(line, index) in store[storeProp].items" :key="line.id" class="rounded-xl border border-blue-100 bg-white p-3">
         <span class="block truncate text-xs font-semibold text-slate-800">{{ line.name || `Ligne ${index + 1}` }}</span>
         <select
-          v-model="line.business_activity_type"
+          :value="line.business_activity_type"
           class="mt-2 w-full rounded-lg border-slate-300 text-xs"
           :disabled="Boolean(line.item_id)"
-          @change="syncClassification(index, line)"
+          @change="changeClassification(index, line, $event)"
         >
           <option v-for="option in activityTypes" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
@@ -167,38 +168,55 @@ watch(
 
 function addItem() {
   props.store.addItem()
+  const index = props.store[props.storeProp].items.length - 1
 
-  const item = props.store[props.storeProp].items.at(-1)
-  if (!item.business_activity_type) {
-    item.business_activity_type = 'service_bic'
-  }
+  props.store.$patch((state) => {
+    const item = state[props.storeProp].items[index]
+    if (!item.business_activity_type) {
+      item.business_activity_type = 'service_bic'
+    }
 
-  if (props.storeProp !== 'newEstimate') return
+    if (props.storeProp === 'newEstimate') {
+      if (!item.line_uuid) item.line_uuid = Guid.raw()
+      if (!Array.isArray(item.line_photos)) item.line_photos = []
+    }
+  })
+}
 
-  if (!item.line_uuid) item.line_uuid = Guid.raw()
-  if (!Array.isArray(item.line_photos)) item.line_photos = []
+function reorderItems(items) {
+  props.store.$patch((state) => {
+    state[props.storeProp].items = items
+  })
 }
 
 function syncCatalogClassifications() {
   const catalog = Array.isArray(itemStore.items) ? itemStore.items : []
 
-  props.store[props.storeProp].items.forEach((line, index) => {
-    if (!line.business_activity_type) {
-      line.business_activity_type = 'service_bic'
-    }
-    if (!line.item_id) return
+  props.store.$patch((state) => {
+    state[props.storeProp].items.forEach((line) => {
+      if (!line.business_activity_type) {
+        line.business_activity_type = 'service_bic'
+      }
+      if (!line.item_id) return
 
-    const product = catalog.find((item) => Number(item.id) === Number(line.item_id))
-    if (!product?.business_activity_type) return
-    if (line.business_activity_type === product.business_activity_type) return
+      const product = catalog.find((item) => Number(item.id) === Number(line.item_id))
+      if (!product?.business_activity_type) return
 
-    props.store.$patch((state) => {
-      state[props.storeProp].items[index].business_activity_type = product.business_activity_type
+      line.business_activity_type = product.business_activity_type
     })
   })
 }
 
-function syncClassification(index, line) {
-  props.store.updateItem({ ...line, index })
+function changeClassification(index, line, event) {
+  const businessActivityType = event.target.value
+
+  props.store.$patch((state) => {
+    state[props.storeProp].items[index].business_activity_type = businessActivityType
+  })
+  props.store.updateItem({
+    ...line,
+    business_activity_type: businessActivityType,
+    index,
+  })
 }
 </script>
