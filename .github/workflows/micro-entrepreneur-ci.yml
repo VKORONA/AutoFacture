@@ -1,0 +1,128 @@
+name: AutoFacture Micro Entrepreneur CI
+
+on:
+  push:
+    branches:
+      - feature/micro-entrepreneur-turnover
+  pull_request:
+    branches:
+      - feature/exact-premium-invoice-estimate
+  workflow_dispatch:
+
+concurrency:
+  group: autofacture-micro-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Déclaration micro — Laravel 12 PHP 8.4
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: autofacture_test
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: autofacture_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SESSION_DRIVER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, intl, openssl, pdo_mysql, tokenizer, xml, zip
+          coverage: none
+      - name: Installer qrencode
+        run: sudo apt-get update && sudo apt-get install -y qrencode
+      - name: Préparer Laravel
+        run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+      - name: Migrer et exécuter les tests
+        run: |
+          php artisan migrate:fresh --force
+          php artisan test
+      - name: Contrôler le format PHP modifié
+        run: |
+          vendor/bin/pint --test \
+            app/Domain/MicroEntrepreneur/BusinessActivityType.php \
+            app/Domain/MicroEntrepreneur/MicroEntrepreneurRateResolver.php \
+            app/Domain/MicroEntrepreneur/MicroEntrepreneurTurnoverCalculator.php \
+            app/Http/Controllers/V1/Admin/Estimate/CloneEstimateController.php \
+            app/Http/Controllers/V1/Admin/Estimate/ConvertEstimateController.php \
+            app/Http/Controllers/V1/Admin/Invoice/CloneInvoiceController.php \
+            app/Http/Controllers/V1/Admin/MicroEntrepreneur/MicroEntrepreneurController.php \
+            app/Http/Requests/EstimatesRequest.php \
+            app/Http/Requests/InvoicesRequest.php \
+            app/Http/Requests/ItemsRequest.php \
+            app/Http/Resources/EstimateItemResource.php \
+            app/Http/Resources/InvoiceItemResource.php \
+            app/Http/Resources/ItemResource.php \
+            app/Models/EstimateItem.php \
+            app/Models/InvoiceItem.php \
+            app/Models/Item.php \
+            app/Models/MicroEntrepreneurSetting.php \
+            app/Models/MicroTurnoverAdjustment.php \
+            config/autofacture.php \
+            config/micro-entrepreneur.php \
+            database/factories/EstimateItemFactory.php \
+            database/factories/InvoiceItemFactory.php \
+            database/factories/ItemFactory.php \
+            database/migrations/2026_07_21_100000_add_micro_entrepreneur_classification_and_settings.php \
+            routes/autofacture.php \
+            tests/Feature/Admin/MicroEntrepreneurDeclarationTest.php
+
+  frontend:
+    name: Interface micro — Vue build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, intl, openssl, tokenizer, xml, zip
+          coverage: none
+      - run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+      - name: Installer, vérifier et construire
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npx eslint \
+            resources/scripts/admin/components/estimate-invoice-common/CreateItems.vue \
+            resources/scripts/admin/stores/micro-entrepreneur.js \
+            resources/scripts/admin/stub/estimate-item.js \
+            resources/scripts/admin/stub/invoice-item.js \
+            resources/scripts/admin/views/items/Create.vue \
+            resources/scripts/admin/views/micro-entrepreneur/Index.vue \
+            resources/scripts/router/index.js
+          npm run build
+
+  docker:
+    name: Docker — module micro
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker compose build app
