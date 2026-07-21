@@ -6,6 +6,7 @@ export default {
   name: '',
   title: '',
   description: null,
+  business_activity_type: 'service_bic',
   quantity: 1,
   price: 0,
   discount_type: 'fixed',
