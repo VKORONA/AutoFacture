@@ -31,7 +31,7 @@ return new class extends Migration
 
         Schema::create('micro_entrepreneur_settings', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('company_id')->unique()->constrained()->cascadeOnDelete();
+            $table->unsignedInteger('company_id')->unique();
             $table->boolean('enabled')->default(false);
             $table->string('declaration_frequency', 16)->default('monthly');
             $table->string('cfp_profile', 16)->default('commercial');
@@ -42,12 +42,17 @@ return new class extends Migration
             $table->json('rate_overrides')->nullable();
             $table->timestamp('rates_verified_at')->nullable();
             $table->timestamps();
+
+            $table->foreign('company_id')
+                ->references('id')
+                ->on('companies')
+                ->cascadeOnDelete();
         });
 
         Schema::create('micro_turnover_adjustments', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedInteger('company_id');
+            $table->unsignedInteger('creator_id')->nullable();
             $table->date('adjustment_date')->index();
             $table->string('business_activity_type', 32)->index();
             $table->bigInteger('amount');
@@ -55,6 +60,14 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
 
+            $table->foreign('company_id')
+                ->references('id')
+                ->on('companies')
+                ->cascadeOnDelete();
+            $table->foreign('creator_id')
+                ->references('id')
+                ->on('users')
+                ->nullOnDelete();
             $table->index(['company_id', 'adjustment_date'], 'micro_adjustments_company_date_index');
         });
     }
