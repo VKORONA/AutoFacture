@@ -2,6 +2,7 @@
 
 namespace Crater\Models;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Crater\Traits\HasCustomFieldsTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,28 @@ class EstimateItem extends Model
         'discount_val' => 'integer',
         'tax' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $estimateItem): void {
+            if ($estimateItem->item_id) {
+                $catalogType = Item::query()
+                    ->whereKey($estimateItem->item_id)
+                    ->where('company_id', $estimateItem->company_id)
+                    ->value('business_activity_type');
+
+                if ($catalogType) {
+                    $estimateItem->business_activity_type = $catalogType instanceof BusinessActivityType
+                        ? $catalogType->value
+                        : (string) $catalogType;
+                }
+            }
+
+            $estimateItem->business_activity_type = BusinessActivityType::tryFrom(
+                (string) $estimateItem->business_activity_type
+            )?->value ?? BusinessActivityType::SERVICE_BIC->value;
+        });
+    }
 
     public function estimate(): BelongsTo
     {
