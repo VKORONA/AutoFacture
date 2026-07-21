@@ -45,6 +45,33 @@
           </BaseInputGroup>
 
           <BaseInputGroup
+            label="Nature fiscale de l’article"
+            :content-loading="isFetchingInitialData"
+            required
+            :error="
+              v$.currentItem.business_activity_type.$error &&
+              v$.currentItem.business_activity_type.$errors[0].$message
+            "
+          >
+            <BaseMultiselect
+              v-model="itemStore.currentItem.business_activity_type"
+              :content-loading="isFetchingInitialData"
+              :options="activityTypes"
+              label="label"
+              value-prop="value"
+              track-by="label"
+              :can-clear="false"
+              :can-deselect="false"
+              @change="v$.currentItem.business_activity_type.$touch()"
+            />
+            <div class="mt-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
+              Ce classement est copié sur chaque ligne de devis et de facture. Il permet de
+              séparer automatiquement les ventes, les prestations BIC et les activités BNC
+              dans la déclaration de chiffre d’affaires micro-entrepreneur.
+            </div>
+          </BaseInputGroup>
+
+          <BaseInputGroup
             :content-loading="isFetchingInitialData"
             :label="$t('items.unit')"
           >
@@ -139,8 +166,6 @@ import { useI18n } from 'vue-i18n'
 import {
   required,
   minLength,
-  numeric,
-  minValue,
   maxLength,
   helpers,
 } from '@vuelidate/validators'
@@ -162,12 +187,19 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+const activityTypes = [
+  { value: 'goods_bic', label: 'Vente de marchandises / fourniture de biens (BIC)' },
+  { value: 'service_bic', label: 'Prestation commerciale ou artisanale (BIC)' },
+  { value: 'service_bnc', label: 'Activité libérale non réglementée (BNC)' },
+  { value: 'service_bnc_cipav', label: 'Activité libérale relevant de la Cipav (BNC)' },
+]
+
 const isSaving = ref(false)
 const taxPerItem = ref(companyStore.selectedCompanySettings.tax_per_item)
-
 let isFetchingInitialData = ref(false)
 
 itemStore.$reset()
+itemStore.currentItem.business_activity_type = 'service_bic'
 loadData()
 
 const price = computed({
@@ -221,7 +253,9 @@ const rules = computed(() => {
           minLength(3)
         ),
       },
-
+      business_activity_type: {
+        required: helpers.withMessage(t('validation.required'), required),
+      },
       description: {
         maxLength: helpers.withMessage(
           t('validation.description_maxlength'),
@@ -253,6 +287,7 @@ async function loadData() {
   if (isEdit.value) {
     let id = route.params.id
     await itemStore.fetchItem(id)
+    itemStore.currentItem.business_activity_type ||= 'service_bic'
     itemStore.currentItem.tax_per_item === 1
       ? (taxPerItem.value = 'YES')
       : (taxPerItem.value = 'NO')
@@ -298,6 +333,7 @@ async function submitItem() {
     isSaving.value = false
     return
   }
+
   function closeItemModal() {
     modalStore.closeModal()
     setTimeout(() => {
