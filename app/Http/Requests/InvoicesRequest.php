@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Requests;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Crater\Models\CompanySetting;
 use Crater\Models\Customer;
 use Crater\Models\Invoice;
@@ -63,6 +64,10 @@ class InvoicesRequest extends FormRequest
             'items.*' => ['required', 'array'],
             'items.*.description' => ['nullable', 'string'],
             'items.*.name' => ['required', 'string', 'max:255'],
+            'items.*.business_activity_type' => [
+                'required',
+                Rule::in(BusinessActivityType::values()),
+            ],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.price' => ['required', 'integer', 'min:0'],
             'items.*.discount_val' => ['nullable', 'integer', 'min:0'],
