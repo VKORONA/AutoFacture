@@ -287,7 +287,9 @@ async function loadData() {
   if (isEdit.value) {
     let id = route.params.id
     await itemStore.fetchItem(id)
-    itemStore.currentItem.business_activity_type ||= 'service_bic'
+    if (!itemStore.currentItem.business_activity_type) {
+      itemStore.currentItem.business_activity_type = 'service_bic'
+    }
     itemStore.currentItem.tax_per_item === 1
       ? (taxPerItem.value = 'YES')
       : (taxPerItem.value = 'NO')
