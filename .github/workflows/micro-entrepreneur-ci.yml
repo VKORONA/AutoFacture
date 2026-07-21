@@ -73,6 +73,7 @@ jobs:
           retention-days: 7
       - name: Contrôler le format PHP modifié
         run: |
+          set -o pipefail
           vendor/bin/pint --test \
             app/Domain/MicroEntrepreneur/BusinessActivityType.php \
             app/Domain/MicroEntrepreneur/MicroEntrepreneurRateResolver.php \
@@ -99,7 +100,15 @@ jobs:
             database/factories/ItemFactory.php \
             database/migrations/2026_07_21_100000_add_micro_entrepreneur_classification_and_settings.php \
             routes/autofacture.php \
-            tests/Feature/Admin/MicroEntrepreneurDeclarationTest.php
+            tests/Feature/Admin/MicroEntrepreneurDeclarationTest.php 2>&1 | tee micro-pint.log
+      - name: Publier le diagnostic Pint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: micro-pint-diagnostics
+          path: micro-pint.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   frontend:
     name: Interface micro — Vue build
