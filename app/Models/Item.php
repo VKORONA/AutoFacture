@@ -3,6 +3,7 @@
 namespace Crater\Models;
 
 use Carbon\Carbon;
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,7 @@ class Item extends Model
 
     protected $casts = [
         'price' => 'integer',
+        'business_activity_type' => BusinessActivityType::class,
     ];
 
     protected $appends = [
@@ -80,6 +82,10 @@ class Item extends Model
 
         if ($filters->get('unit_id')) {
             $query->whereUnit($filters->get('unit_id'));
+        }
+
+        if ($filters->get('business_activity_type')) {
+            $query->where('items.business_activity_type', $filters->get('business_activity_type'));
         }
 
         if ($filters->get('item_id')) {
@@ -149,9 +155,7 @@ class Item extends Model
             }
         }
 
-        $item = self::with('taxes')->find($item->id);
-
-        return $item;
+        return self::with('taxes')->find($item->id);
     }
 
     public function updateItem($request)

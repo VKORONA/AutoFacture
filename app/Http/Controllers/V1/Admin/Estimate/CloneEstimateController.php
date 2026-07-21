@@ -95,6 +95,7 @@ class CloneEstimateController extends Controller
                     'item_id',
                     'name',
                     'description',
+                    'business_activity_type',
                     'quantity',
                     'price',
                     'discount',

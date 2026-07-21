@@ -6,6 +6,7 @@ use Crater\Http\Controllers\V1\Admin\ElectronicInvoicing\ElectronicInvoiceConnec
 use Crater\Http\Controllers\V1\Admin\Estimate\CloneEstimateController;
 use Crater\Http\Controllers\V1\Admin\Estimate\EstimateAssetController;
 use Crater\Http\Controllers\V1\Admin\Invoice\FinalizeInvoiceController;
+use Crater\Http\Controllers\V1\Admin\MicroEntrepreneur\MicroEntrepreneurController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
@@ -46,6 +47,19 @@ Route::prefix('v1')
                 ->name('accounting.exports.generate');
             Route::get('/exports/{batch}/download', [AccountingController::class, 'download'])
                 ->name('accounting.exports.download');
+        });
+
+        Route::prefix('micro-entrepreneur')->group(function (): void {
+            Route::get('/', [MicroEntrepreneurController::class, 'show'])
+                ->name('micro-entrepreneur.show');
+            Route::put('/settings', [MicroEntrepreneurController::class, 'updateSettings'])
+                ->name('micro-entrepreneur.settings.update');
+            Route::post('/adjustments', [MicroEntrepreneurController::class, 'storeAdjustment'])
+                ->name('micro-entrepreneur.adjustments.store');
+            Route::delete('/adjustments/{adjustment}', [MicroEntrepreneurController::class, 'destroyAdjustment'])
+                ->name('micro-entrepreneur.adjustments.destroy');
+            Route::get('/export', [MicroEntrepreneurController::class, 'export'])
+                ->name('micro-entrepreneur.export');
         });
 
         Route::prefix('electronic-invoicing')->group(function (): void {
