@@ -57,8 +57,20 @@ jobs:
           php artisan key:generate
       - name: Migrer et exécuter les tests
         run: |
-          php artisan migrate:fresh --force
-          php artisan test
+          set -o pipefail
+          php artisan migrate:fresh --force 2>&1 | tee micro-migrations.log
+          php artisan test 2>&1 | tee micro-tests.log
+      - name: Publier les diagnostics backend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: micro-backend-diagnostics
+          path: |
+            micro-migrations.log
+            micro-tests.log
+            storage/logs/laravel.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Contrôler le format PHP modifié
         run: |
           vendor/bin/pint --test \
@@ -106,9 +118,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '16.20.2'
-      - name: Installer, vérifier et construire
+      - name: Installer les dépendances
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Vérifier le frontend
         run: |
-          npm install --legacy-peer-deps --no-audit --no-fund
+          set -o pipefail
           npx eslint \
             resources/scripts/admin/components/estimate-invoice-common/CreateItems.vue \
             resources/scripts/admin/stores/micro-entrepreneur.js \
@@ -116,8 +130,21 @@ jobs:
             resources/scripts/admin/stub/invoice-item.js \
             resources/scripts/admin/views/items/Create.vue \
             resources/scripts/admin/views/micro-entrepreneur/Index.vue \
-            resources/scripts/router/index.js
-          npm run build
+            resources/scripts/router/index.js 2>&1 | tee micro-eslint.log
+      - name: Construire le frontend
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee micro-build.log
+      - name: Publier les diagnostics frontend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: micro-frontend-diagnostics
+          path: |
+            micro-eslint.log
+            micro-build.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   docker:
     name: Docker — module micro
