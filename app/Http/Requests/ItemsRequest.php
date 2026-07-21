@@ -2,39 +2,27 @@
 
 namespace Crater\Http\Requests;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ItemsRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     *
-     * @return bool
-     */
     public function authorize()
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array
-     */
     public function rules()
     {
         return [
-            'name' => [
+            'name' => ['required', 'string', 'max:255'],
+            'price' => ['required', 'integer', 'min:0'],
+            'unit_id' => ['nullable'],
+            'description' => ['nullable', 'string', 'max:65000'],
+            'business_activity_type' => [
                 'required',
-            ],
-            'price' => [
-                'required',
-            ],
-            'unit_id' => [
-                'nullable',
-            ],
-            'description' => [
-                'nullable',
+                Rule::in(BusinessActivityType::values()),
             ],
         ];
     }
