@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Resources;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Crater\Models\EstimateLinePhoto;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,12 +15,17 @@ class EstimateItemResource extends JsonResource
             ->where('line_uuid', $this->line_uuid)
             ->orderBy('sort_order')
             ->get();
+        $activityType = BusinessActivityType::tryFrom(
+            (string) ($this->business_activity_type ?: BusinessActivityType::SERVICE_BIC->value)
+        ) ?? BusinessActivityType::SERVICE_BIC;
 
         return [
             'id' => $this->id,
             'line_uuid' => $this->line_uuid,
             'name' => $this->name,
             'description' => $this->description,
+            'business_activity_type' => $activityType->value,
+            'business_activity_label' => $activityType->label(),
             'discount_type' => $this->discount_type,
             'quantity' => $this->quantity,
             'unit_name' => $this->unit_name,
