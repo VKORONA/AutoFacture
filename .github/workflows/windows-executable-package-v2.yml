@@ -1,0 +1,118 @@
+name: AutoFacture Windows executable package v2
+
+on:
+  pull_request:
+    branches:
+      - feature/micro-entrepreneur-turnover
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, intl, openssl, pdo_mysql, tokenizer, xml, zip
+          coverage: none
+
+      - name: Installer les dépendances PHP de production
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+
+      - name: Construire l'interface Vue
+        run: |
+          npm install --legacy-peer-deps --no-audit --no-fund
+          npm run build
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+
+      - name: Compiler AutoFacture.exe pour Windows 64 bits
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o AutoFacture.exe ./tools/windows-launcher/main.go
+
+      - name: Créer le ZIP Windows
+        shell: bash
+        run: |
+          rm -rf dist
+          mkdir -p dist/AutoFacture
+          rsync -a ./ dist/AutoFacture/ \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.env' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude 'AutoFacture.exe' \
+            --exclude 'storage/logs/*.log'
+          cp AutoFacture.exe dist/AutoFacture/AutoFacture.exe
+          cat > dist/AutoFacture/Arreter_AutoFacture.bat <<'EOF'
+          @echo off
+          cd /d "%~dp0"
+          docker compose down
+          pause
+          EOF
+          cat > dist/AutoFacture/Ouvrir_AutoFacture.bat <<'EOF'
+          @echo off
+          start "" http://localhost
+          EOF
+          cat > dist/AutoFacture/LISEZ-MOI.txt <<'EOF'
+          AUTOFACTURE — DERNIERE VERSION GITHUB POUR WINDOWS
+          ==================================================
+
+          Version métier : feature/micro-entrepreneur-turnover
+          Commit source  : fb39e2ece4baf41cdc035ac7dba5fa836e25f048
+          Date du commit : 21 juillet 2026
+          Architecture   : Windows 64 bits
+
+          INSTALLATION ET LANCEMENT
+          --------------------------
+          1. Décompressez entièrement ce ZIP dans un dossier local.
+          2. Installez Docker Desktop et activez WSL 2.
+          3. Démarrez Docker Desktop.
+          4. Double-cliquez sur AutoFacture.exe.
+          5. Le lanceur initialise l'application puis ouvre http://localhost.
+
+          CONNEXION LOCALE
+          ----------------
+          Identifiant : admin
+          Mot de passe : autofacture-dev
+
+          Le premier lancement construit les conteneurs PHP 8.4, MariaDB 10.11
+          et Nginx, initialise la base et crée le compte local. Les lancements
+          suivants conservent les données et appliquent les migrations disponibles.
+
+          Cette version reste une bêta locale. Ne pas utiliser de données clients
+          réelles avant validation fonctionnelle et réglementaire complète.
+
+          Pour arrêter les services, utilisez Arreter_AutoFacture.bat.
+          Pour rouvrir l'interface, utilisez Ouvrir_AutoFacture.bat.
+
+          Source : https://github.com/VKORONA/AutoFacture
+          Licence : AGPL-3.0, voir LICENSE.
+          EOF
+          cat > dist/AutoFacture/VERSION.txt <<'EOF'
+          product=AutoFacture
+          source_branch=feature/micro-entrepreneur-turnover
+          source_commit=fb39e2ece4baf41cdc035ac7dba5fa836e25f048
+          package_branch=build/windows-executable-20260726
+          architecture=windows-amd64
+          runtime=Docker Desktop + WSL2
+          EOF
+          cd dist
+          zip -r -9 ../AutoFacture_Windows_GitHub_Latest_fb39e2e.zip AutoFacture >/dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoFacture-Windows-GitHub-Latest-v2
+          path: AutoFacture_Windows_GitHub_Latest_fb39e2e.zip
+          if-no-files-found: error
+          retention-days: 7
