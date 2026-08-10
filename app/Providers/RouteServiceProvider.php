@@ -38,5 +38,13 @@ class RouteServiceProvider extends ServiceProvider
                 optional($request->user())->id ?: $request->ip()
             );
         });
+
+        RateLimiter::for('company-registry', function (Request $request): Limit {
+            $actor = optional($request->user())->id ?: $request->ip();
+
+            return Limit::perMinute(30)->by(
+                'company-registry:'.$actor.':'.$request->header('company')
+            );
+        });
     }
 }

@@ -42,6 +42,7 @@ class Customer extends Authenticatable implements HasMedia
 
     protected $casts = [
         'enable_portal' => 'boolean',
+        'registry_checked_at' => 'datetime',
     ];
 
     public function getFormattedCreatedAtAttribute($value)

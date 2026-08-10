@@ -36,6 +36,9 @@ class CustomerRequest extends FormRequest
             'siret' => ['nullable', 'regex:/^\d{14}$/', new ValidFrenchBusinessNumber(14, 'SIRET')],
             'vat_number' => ['nullable', 'string', 'max:20', 'regex:/^[A-Z]{2}[A-Z0-9]{2,18}$/i'],
             'ape_code' => ['nullable', 'string', 'max:8'],
+            'legal_form' => ['nullable', 'string', 'max:40'],
+            'registry_checked_at' => ['nullable', 'date'],
+            'registry_source' => ['nullable', 'string', 'max:100'],
             'enable_portal' => ['boolean'],
             'currency_id' => ['required', 'integer', 'exists:currencies,id'],
             'billing.name' => ['nullable'],
@@ -68,6 +71,12 @@ class CustomerRequest extends FormRequest
             ];
         }
 
+        if ($this->customer_type === 'business' && $this->siret) {
+            $rules['siret'][] = Rule::unique('customers', 'siret')
+                ->where('company_id', $this->header('company'))
+                ->ignore($this->route('customer')?->id);
+        }
+
         return $rules;
     }
 
@@ -89,6 +98,9 @@ class CustomerRequest extends FormRequest
                 'siret' => $this->digitsOnly($this->siret),
                 'vat_number' => $this->upperCompact($this->vat_number),
                 'ape_code' => $this->upperCompact($this->ape_code),
+                'legal_form' => $this->nullableString($this->legal_form),
+                'registry_checked_at' => $this->registry_checked_at,
+                'registry_source' => $this->nullableString($this->registry_source),
                 'electronic_invoicing_email' => $this->normalizeEmail($this->electronic_invoicing_email),
             ]
             : [
@@ -97,6 +109,9 @@ class CustomerRequest extends FormRequest
                 'siret' => null,
                 'vat_number' => null,
                 'ape_code' => null,
+                'legal_form' => null,
+                'registry_checked_at' => null,
+                'registry_source' => null,
                 'electronic_invoicing_email' => null,
             ];
 
@@ -126,6 +141,9 @@ class CustomerRequest extends FormRequest
                 'siret',
                 'vat_number',
                 'ape_code',
+                'legal_form',
+                'registry_checked_at',
+                'registry_source',
                 'enable_portal',
                 'estimate_prefix',
                 'payment_prefix',
@@ -174,5 +192,12 @@ class CustomerRequest extends FormRequest
         $value = trim((string) $value);
 
         return $value === '' ? null : strtolower($value);
+    }
+
+    private function nullableString($value)
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 }
