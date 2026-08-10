@@ -68,8 +68,6 @@ jobs:
             app/Http/Requests/CompanyRegistrySearchRequest.php \
             app/Http/Requests/CustomerRequest.php \
             app/Http/Resources/CustomerResource.php \
-            app/Models/Customer.php \
-            app/Providers/RouteServiceProvider.php \
             app/Domain/Payments/SepaQrCodeService.php \
             app/Http/Controllers/V1/Admin/Estimate/CloneEstimateController.php \
             app/Http/Controllers/V1/Admin/Estimate/ConvertEstimateController.php \
