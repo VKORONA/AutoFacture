@@ -248,11 +248,11 @@ Route::prefix('/v1')->group(function () {
             //----------------------------------
 
             Route::get('/company-registry/search', [CompanyRegistryController::class, 'search'])
-                ->middleware('throttle:30,1');
+                ->middleware('throttle:company-registry');
 
             Route::get('/company-registry/lookup/{identifier}', CompanyRegistryLookupController::class)
                 ->where('identifier', '[0-9\s.-]+')
-                ->middleware('throttle:30,1');
+                ->middleware('throttle:company-registry');
 
             Route::post('/customers/delete', [CustomersController::class, 'delete']);
 

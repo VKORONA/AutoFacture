@@ -62,6 +62,14 @@ jobs:
       - name: Contrôler le format PHP modifié
         run: |
           vendor/bin/pint --test \
+            app/Domain/CompanyRegistry/CompanyRegistryService.php \
+            app/Http/Controllers/V1/Admin/CompanyRegistry/CompanyRegistryController.php \
+            app/Http/Controllers/V1/Admin/CompanyRegistry/CompanyRegistryLookupController.php \
+            app/Http/Requests/CompanyRegistrySearchRequest.php \
+            app/Http/Requests/CustomerRequest.php \
+            app/Http/Resources/CustomerResource.php \
+            app/Models/Customer.php \
+            app/Providers/RouteServiceProvider.php \
             app/Domain/Payments/SepaQrCodeService.php \
             app/Http/Controllers/V1/Admin/Estimate/CloneEstimateController.php \
             app/Http/Controllers/V1/Admin/Estimate/ConvertEstimateController.php \
@@ -71,6 +79,8 @@ jobs:
             app/Http/Resources/EstimateResource.php \
             app/Http/Resources/InvoiceResource.php \
             database/migrations/2026_07_20_180000_add_premium_document_fields.php \
+            database/migrations/2026_08_10_180000_add_company_registry_fields_to_customers.php \
+            tests/Feature/Admin/CompanyRegistryTest.php \
             tests/Feature/Admin/DocumentTemplatesAndDuplicationTest.php \
             tests/Feature/Admin/PremiumDocumentRenderingTest.php \
             tests/Unit/Domain/Payments/SepaQrCodeServiceTest.php
