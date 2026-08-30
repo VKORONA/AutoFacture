@@ -254,8 +254,8 @@ final class MicroEntrepreneurTurnoverCalculator
     }
 
     /**
-     * @param array<string, int> $totals
-     * @param array<string, mixed> $activity
+     * @param  array<string, int>  $totals
+     * @param  array<string, mixed>  $activity
      */
     private function addToTotals(array &$totals, array $activity): void
     {
