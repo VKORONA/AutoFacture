@@ -9,6 +9,5 @@ final readonly class ProviderConnectionResult
         public string $code,
         public string $message,
         public array $metadata = [],
-    ) {
-    }
+    ) {}
 }

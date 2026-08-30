@@ -13,10 +13,15 @@ class ElectronicInvoiceConnection extends Model
     public const PROVIDER_SUPERPDP = 'superpdp';
 
     public const STATUS_NOT_CONFIGURED = 'not_configured';
+
     public const STATUS_CREDENTIALS_SAVED = 'credentials_saved';
+
     public const STATUS_AUTHORIZATION_PENDING = 'authorization_pending';
+
     public const STATUS_CONNECTED = 'connected';
+
     public const STATUS_TOKEN_REFRESH_REQUIRED = 'token_refresh_required';
+
     public const STATUS_CONNECTION_LOST = 'connection_lost';
 
     /** @deprecated Kept for extensions compiled against the beta constants. */

@@ -131,7 +131,7 @@ final class MicroEntrepreneurTurnoverCalculator
             'activity_options' => BusinessActivityType::options(),
             'months' => $months,
             'totals' => $grandTotals,
-            'adjustments' => $adjustments->map(static fn(MicroTurnoverAdjustment $adjustment): array => [
+            'adjustments' => $adjustments->map(static fn (MicroTurnoverAdjustment $adjustment): array => [
                 'id' => $adjustment->id,
                 'adjustment_date' => $adjustment->adjustment_date->toDateString(),
                 'business_activity_type' => $adjustment->business_activity_type->value,
@@ -218,7 +218,7 @@ final class MicroEntrepreneurTurnoverCalculator
         $declaredTurnover = (int) round($paymentBaseAmount * $netTurnover / $invoiceTotal);
         $byActivity = $lineTotals
             ->groupBy('activity')
-            ->map(static fn(Collection $lines): int => (int) $lines->sum('amount'));
+            ->map(static fn (Collection $lines): int => (int) $lines->sum('amount'));
         $result = [];
         $remaining = $declaredTurnover;
         $activities = $byActivity->keys()->values();
