@@ -2,6 +2,7 @@
 
 namespace Crater\Http\Requests;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Crater\Models\CompanySetting;
 use Crater\Models\Customer;
 use Crater\Models\Estimate;
@@ -45,6 +46,10 @@ class EstimatesRequest extends FormRequest
             'items' => ['required', 'array'],
             'items.*.description' => ['nullable'],
             'items.*.name' => ['required'],
+            'items.*.business_activity_type' => [
+                'required',
+                Rule::in(BusinessActivityType::values()),
+            ],
             'items.*.line_uuid' => ['nullable', 'uuid'],
             'items.*.quantity' => ['required'],
             'items.*.price' => ['required'],
