@@ -131,14 +131,16 @@ final class MicroEntrepreneurTurnoverCalculator
             'activity_options' => BusinessActivityType::options(),
             'months' => $months,
             'totals' => $grandTotals,
-            'adjustments' => $adjustments->map(static fn (MicroTurnoverAdjustment $adjustment): array => [
-                'id' => $adjustment->id,
-                'adjustment_date' => $adjustment->adjustment_date->toDateString(),
-                'business_activity_type' => $adjustment->business_activity_type->value,
-                'amount' => (int) $adjustment->amount,
-                'label' => $adjustment->label,
-                'notes' => $adjustment->notes,
-            ])->values(),
+            'adjustments' => $adjustments->map(static function (MicroTurnoverAdjustment $adjustment): array {
+                return [
+                    'id' => $adjustment->id,
+                    'adjustment_date' => $adjustment->adjustment_date->toDateString(),
+                    'business_activity_type' => $adjustment->business_activity_type->value,
+                    'amount' => (int) $adjustment->amount,
+                    'label' => $adjustment->label,
+                    'notes' => $adjustment->notes,
+                ];
+            })->values(),
             'unclassified_receipts' => [
                 'count' => $unclassifiedCount,
                 'amount' => $unclassifiedAmount,
@@ -218,7 +220,9 @@ final class MicroEntrepreneurTurnoverCalculator
         $declaredTurnover = (int) round($paymentBaseAmount * $netTurnover / $invoiceTotal);
         $byActivity = $lineTotals
             ->groupBy('activity')
-            ->map(static fn (Collection $lines): int => (int) $lines->sum('amount'));
+            ->map(static function (Collection $lines): int {
+                return (int) $lines->sum('amount');
+            });
         $result = [];
         $remaining = $declaredTurnover;
         $activities = $byActivity->keys()->values();
