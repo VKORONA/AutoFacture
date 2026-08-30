@@ -1,13 +1,17 @@
 <?php
 
+use Crater\Http\Controllers\HealthController;
 use Crater\Http\Controllers\V1\Admin\Accounting\AccountingController;
 use Crater\Http\Controllers\V1\Admin\CreditNote\CreditNotesController;
 use Crater\Http\Controllers\V1\Admin\ElectronicInvoicing\ElectronicInvoiceConnectionController;
+use Crater\Http\Controllers\V1\Admin\ElectronicInvoicing\SuperPdpOAuthController;
 use Crater\Http\Controllers\V1\Admin\Estimate\CloneEstimateController;
 use Crater\Http\Controllers\V1\Admin\Estimate\EstimateAssetController;
 use Crater\Http\Controllers\V1\Admin\Invoice\FinalizeInvoiceController;
 use Crater\Http\Controllers\V1\Admin\MicroEntrepreneur\MicroEntrepreneurController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/health', HealthController::class)->name('health');
 
 Route::prefix('v1')
     ->middleware(['auth:sanctum', 'company', 'bouncer'])
@@ -71,10 +75,16 @@ Route::prefix('v1')
                 ->name('electronic-invoicing.connection.credentials');
             Route::post('/connection/test', [ElectronicInvoiceConnectionController::class, 'test'])
                 ->name('electronic-invoicing.connection.test');
+            Route::post('/oauth/start', [SuperPdpOAuthController::class, 'start'])
+                ->name('electronic-invoicing.oauth.start');
             Route::delete('/connection', [ElectronicInvoiceConnectionController::class, 'disconnect'])
                 ->name('electronic-invoicing.connection.disconnect');
         });
     });
+
+Route::get('/v1/electronic-invoicing/oauth/callback', [SuperPdpOAuthController::class, 'callback'])
+    ->middleware('throttle:30,1')
+    ->name('electronic-invoicing.oauth.callback');
 
 Route::prefix('v1/estimate-assets')
     ->middleware(['auth:sanctum'])

@@ -28,7 +28,9 @@ export const useElectronicInvoicingStore = defineStore({
       this.isLoading = true
 
       try {
-        const response = await axios.get('/api/v1/electronic-invoicing/connection')
+        const response = await axios.get(
+          '/api/v1/electronic-invoicing/connection'
+        )
         this.applyPayload(response.data)
 
         return response
@@ -88,6 +90,23 @@ export const useElectronicInvoicingStore = defineStore({
         this.applyPayload(response.data)
 
         return response
+      } catch (error) {
+        handleError(error)
+        throw error
+      } finally {
+        this.isSaving = false
+      }
+    },
+
+    async startOAuth() {
+      this.isSaving = true
+
+      try {
+        const response = await axios.post(
+          '/api/v1/electronic-invoicing/oauth/start'
+        )
+
+        return response.data.authorization_url
       } catch (error) {
         handleError(error)
         throw error

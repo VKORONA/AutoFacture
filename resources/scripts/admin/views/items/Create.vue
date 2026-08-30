@@ -64,10 +64,23 @@
               :can-deselect="false"
               @change="v$.currentItem.business_activity_type.$touch()"
             />
-            <div class="mt-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
-              Ce classement est copié sur chaque ligne de devis et de facture. Il permet de
-              séparer automatiquement les ventes, les prestations BIC et les activités BNC
-              dans la déclaration de chiffre d’affaires micro-entrepreneur.
+            <div
+              class="
+                mt-2
+                rounded-xl
+                border border-blue-100
+                bg-blue-50
+                px-3
+                py-2
+                text-xs
+                leading-5
+                text-blue-900
+              "
+            >
+              Ce classement est copié sur chaque ligne de devis et de facture.
+              Il permet de séparer automatiquement les ventes, les prestations
+              BIC et les activités BNC dans la déclaration de chiffre d’affaires
+              micro-entrepreneur.
             </div>
           </BaseInputGroup>
 
@@ -163,12 +176,7 @@
 import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import {
-  required,
-  minLength,
-  maxLength,
-  helpers,
-} from '@vuelidate/validators'
+import { required, minLength, maxLength, helpers } from '@vuelidate/validators'
 import useVuelidate from '@vuelidate/core'
 import { useItemStore } from '@/scripts/admin/stores/item'
 import { useCompanyStore } from '@/scripts/admin/stores/company'
@@ -188,10 +196,16 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const activityTypes = [
-  { value: 'goods_bic', label: 'Vente de marchandises / fourniture de biens (BIC)' },
+  {
+    value: 'goods_bic',
+    label: 'Vente de marchandises / fourniture de biens (BIC)',
+  },
   { value: 'service_bic', label: 'Prestation commerciale ou artisanale (BIC)' },
   { value: 'service_bnc', label: 'Activité libérale non réglementée (BNC)' },
-  { value: 'service_bnc_cipav', label: 'Activité libérale relevant de la Cipav (BNC)' },
+  {
+    value: 'service_bnc_cipav',
+    label: 'Activité libérale relevant de la Cipav (BNC)',
+  },
 ]
 
 const isSaving = ref(false)

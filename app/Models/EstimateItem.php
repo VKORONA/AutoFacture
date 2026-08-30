@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EstimateItem extends Model
 {
-    use HasFactory;
     use HasCustomFieldsTrait;
+    use HasFactory;
 
     protected $guarded = [
         'id',

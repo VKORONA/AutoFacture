@@ -79,6 +79,63 @@ test('searches the official registry through the Laravel API', function () {
         && str_contains($request->header('User-Agent')[0], 'AutoFacture'));
 });
 
+test('returns the exact secondary establishment requested by siret', function () {
+    $payload = registryPayload();
+    $payload['results'][0]['matching_etablissements'] = [[
+        'siret' => '41816609600101',
+        'activite_principale' => '62.01Z',
+        'adresse' => '10 RUE DE LA PAIX 69002 LYON',
+        'numero_voie' => '10',
+        'type_voie' => 'RUE',
+        'libelle_voie' => 'DE LA PAIX',
+        'code_postal' => '69002',
+        'libelle_commune' => 'LYON',
+        'code_pays_etranger' => null,
+        'est_siege' => false,
+        'etat_administratif' => 'A',
+    ]];
+
+    Http::fake([
+        'recherche-entreprises.api.gouv.fr/*' => Http::response($payload),
+    ]);
+
+    getJson('/api/v1/company-registry/search?q=418%20166%20096%2000101')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.siret', '41816609600101')
+        ->assertJsonPath('data.0.address.city', 'LYON')
+        ->assertJsonPath('data.0.is_head_office', false);
+
+    Http::assertSent(fn ($request) => $request['q'] === '41816609600101');
+});
+
+test('returns an empty list when the official registry has no match', function () {
+    Http::fake([
+        'recherche-entreprises.api.gouv.fr/*' => Http::response([
+            'results' => [],
+            'total_results' => 0,
+            'page' => 1,
+            'per_page' => 15,
+            'total_pages' => 0,
+        ]),
+    ]);
+
+    getJson('/api/v1/company-registry/search?q=entreprise-introuvable')
+        ->assertOk()
+        ->assertJsonCount(0, 'data')
+        ->assertJsonPath('meta.total_results', 0);
+});
+
+test('reports official registry throttling without hiding manual entry', function () {
+    Http::fake([
+        'recherche-entreprises.api.gouv.fr/*' => Http::response([], 429),
+    ]);
+
+    getJson('/api/v1/company-registry/search?q=418166096')
+        ->assertTooManyRequests()
+        ->assertJsonPath('action', 'Patientez quelques instants ou continuez la saisie manuellement.');
+});
+
 test('reports an existing customer with the same company and siret', function () {
     Http::fake([
         'recherche-entreprises.api.gouv.fr/*' => Http::response(registryPayload()),

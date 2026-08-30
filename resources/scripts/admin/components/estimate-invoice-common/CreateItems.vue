@@ -12,19 +12,52 @@
     </colgroup>
     <thead class="bg-white border border-gray-200 border-solid">
       <tr>
-        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-left text-gray-700 border-t border-b border-gray-200 border-solid">
+        <th
+          class="
+            px-5
+            py-3
+            text-sm
+            not-italic
+            font-medium
+            leading-5
+            text-left text-gray-700
+            border-t border-b border-gray-200 border-solid
+          "
+        >
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
           <span v-else class="pl-7">{{ $tc('items.item', 2) }}</span>
         </th>
-        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-right text-gray-700 border-t border-b border-gray-200 border-solid">
+        <th
+          class="
+            px-5
+            py-3
+            text-sm
+            not-italic
+            font-medium
+            leading-5
+            text-right text-gray-700
+            border-t border-b border-gray-200 border-solid
+          "
+        >
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
           <span v-else>{{ $t('invoices.item.quantity') }}</span>
         </th>
-        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-left text-gray-700 border-t border-b border-gray-200 border-solid">
+        <th
+          class="
+            px-5
+            py-3
+            text-sm
+            not-italic
+            font-medium
+            leading-5
+            text-left text-gray-700
+            border-t border-b border-gray-200 border-solid
+          "
+        >
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
@@ -32,18 +65,40 @@
         </th>
         <th
           v-if="store[storeProp].discount_per_item === 'YES'"
-          class="px-5 py-3 text-sm not-italic font-medium leading-5 text-left text-gray-700 border-t border-b border-gray-200 border-solid"
+          class="
+            px-5
+            py-3
+            text-sm
+            not-italic
+            font-medium
+            leading-5
+            text-left text-gray-700
+            border-t border-b border-gray-200 border-solid
+          "
         >
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
           <span v-else>{{ $t('invoices.item.discount') }}</span>
         </th>
-        <th class="px-5 py-3 text-sm not-italic font-medium leading-5 text-right text-gray-700 border-t border-b border-gray-200 border-solid">
+        <th
+          class="
+            px-5
+            py-3
+            text-sm
+            not-italic
+            font-medium
+            leading-5
+            text-right text-gray-700
+            border-t border-b border-gray-200 border-solid
+          "
+        >
           <BaseContentPlaceholders v-if="isLoading">
             <BaseContentPlaceholdersText :lines="1" class="w-16 h-5" />
           </BaseContentPlaceholders>
-          <span v-else class="pr-10 column-heading">{{ $t('invoices.item.amount') }}</span>
+          <span v-else class="pr-10 column-heading">{{
+            $t('invoices.item.amount')
+          }}</span>
         </th>
       </tr>
     </thead>
@@ -71,36 +126,82 @@
   </table>
 
   <div
-    class="flex items-center justify-center w-full px-6 py-3 text-base border border-t-0 border-gray-200 border-solid cursor-pointer text-primary-400 hover:bg-primary-100"
+    class="
+      flex
+      items-center
+      justify-center
+      w-full
+      px-6
+      py-3
+      text-base
+      border border-t-0 border-gray-200 border-solid
+      cursor-pointer
+      text-primary-400
+      hover:bg-primary-100
+    "
     @click="addItem"
   >
     <BaseIcon name="PlusCircleIcon" class="mr-2" />
     {{ $t('general.add_new_item') }}
   </div>
 
-  <section v-if="!isLoading" class="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+  <section
+    v-if="!isLoading"
+    class="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4"
+  >
     <div class="flex items-start justify-between gap-4">
       <div>
-        <h3 class="text-sm font-semibold text-slate-900">Répartition vente / prestations</h3>
+        <h3 class="text-sm font-semibold text-slate-900">
+          Répartition vente / prestations
+        </h3>
         <p class="mt-1 text-xs leading-5 text-slate-600">
-          Cette information est mémorisée sur le document pour calculer le chiffre d’affaires encaissé par catégorie. La nature d’un produit du catalogue est reprise automatiquement.
+          Cette information est mémorisée sur le document pour calculer le
+          chiffre d’affaires encaissé par catégorie. La nature d’un produit du
+          catalogue est reprise automatiquement.
         </p>
       </div>
-      <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm">Déclaration micro</span>
+      <span
+        class="
+          rounded-full
+          bg-white
+          px-3
+          py-1
+          text-xs
+          font-semibold
+          text-blue-700
+          shadow-sm
+        "
+        >Déclaration micro</span
+      >
     </div>
 
     <div class="mt-4 grid gap-3 lg:grid-cols-2">
-      <label v-for="(line, index) in store[storeProp].items" :key="line.id" class="rounded-xl border border-blue-100 bg-white p-3">
-        <span class="block truncate text-xs font-semibold text-slate-800">{{ line.name || `Ligne ${index + 1}` }}</span>
+      <label
+        v-for="(line, index) in store[storeProp].items"
+        :key="line.id"
+        class="rounded-xl border border-blue-100 bg-white p-3"
+      >
+        <span class="block truncate text-xs font-semibold text-slate-800">{{
+          line.name || `Ligne ${index + 1}`
+        }}</span>
         <select
           :value="line.business_activity_type"
           class="mt-2 w-full rounded-lg border-slate-300 text-xs"
           :disabled="Boolean(line.item_id)"
           @change="changeClassification(index, line, $event)"
         >
-          <option v-for="option in activityTypes" :key="option.value" :value="option.value">{{ option.label }}</option>
+          <option
+            v-for="option in activityTypes"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </option>
         </select>
-        <span v-if="line.item_id" class="mt-1 block text-[11px] text-slate-500">Défini dans la fiche produit. Modifiez le produit pour changer sa catégorie.</span>
+        <span v-if="line.item_id" class="mt-1 block text-[11px] text-slate-500"
+          >Défini dans la fiche produit. Modifiez le produit pour changer sa
+          catégorie.</span
+        >
       </label>
     </div>
   </section>
@@ -149,7 +250,10 @@ const activityTypes = [
   { value: 'goods_bic', label: 'Vente de marchandises / biens (BIC)' },
   { value: 'service_bic', label: 'Prestation commerciale ou artisanale (BIC)' },
   { value: 'service_bnc', label: 'Activité libérale non réglementée (BNC)' },
-  { value: 'service_bnc_cipav', label: 'Activité libérale relevant de la Cipav (BNC)' },
+  {
+    value: 'service_bnc_cipav',
+    label: 'Activité libérale relevant de la Cipav (BNC)',
+  },
 ]
 
 const defaultCurrency = computed(() => {
@@ -199,7 +303,9 @@ function syncCatalogClassifications() {
       }
       if (!line.item_id) return
 
-      const product = catalog.find((item) => Number(item.id) === Number(line.item_id))
+      const product = catalog.find(
+        (item) => Number(item.id) === Number(line.item_id)
+      )
       if (!product?.business_activity_type) return
 
       line.business_activity_type = product.business_activity_type
@@ -211,7 +317,8 @@ function changeClassification(index, line, event) {
   const businessActivityType = event.target.value
 
   props.store.$patch((state) => {
-    state[props.storeProp].items[index].business_activity_type = businessActivityType
+    state[props.storeProp].items[index].business_activity_type =
+      businessActivityType
   })
   props.store.updateItem({
     ...line,

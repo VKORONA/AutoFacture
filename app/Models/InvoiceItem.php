@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceItem extends Model
 {
-    use HasFactory;
     use HasCustomFieldsTrait;
+    use HasFactory;
 
     protected $guarded = [
         'id',

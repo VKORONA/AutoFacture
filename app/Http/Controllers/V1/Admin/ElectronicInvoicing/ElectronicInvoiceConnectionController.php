@@ -67,8 +67,13 @@ class ElectronicInvoiceConnectionController extends Controller
                 'client_id' => $validated['client_id'],
                 'client_secret' => $validated['client_secret'],
                 'credentials_configured_at' => now(),
-                'connection_status' => ElectronicInvoiceConnection::STATUS_CONFIGURED,
+                'connection_status' => ElectronicInvoiceConnection::STATUS_CREDENTIALS_SAVED,
                 'setup_step' => 4,
+                'access_token' => null,
+                'refresh_token' => null,
+                'token_expires_at' => null,
+                'oauth_state_hash' => null,
+                'oauth_state_expires_at' => null,
                 'last_error_code' => null,
                 'last_error_message' => null,
             ]);
@@ -94,10 +99,12 @@ class ElectronicInvoiceConnectionController extends Controller
             $connection->connection_status = ElectronicInvoiceConnection::STATUS_CONNECTED;
             $connection->last_connected_at = now();
             $connection->external_company_id = $result->metadata['external_company_id'] ?? $connection->external_company_id;
-        } elseif ($result->code === 'remote_test_not_configured') {
-            $connection->connection_status = ElectronicInvoiceConnection::STATUS_CONFIGURED;
+        } elseif (in_array($result->code, ['oauth_not_configured', 'authorization_required'], true)) {
+            $connection->connection_status = ElectronicInvoiceConnection::STATUS_CREDENTIALS_SAVED;
+        } elseif ($result->code === 'token_refresh_required') {
+            $connection->connection_status = ElectronicInvoiceConnection::STATUS_TOKEN_REFRESH_REQUIRED;
         } else {
-            $connection->connection_status = ElectronicInvoiceConnection::STATUS_ERROR;
+            $connection->connection_status = ElectronicInvoiceConnection::STATUS_CONNECTION_LOST;
         }
 
         $connection->metadata = array_merge($connection->metadata ?? [], $result->metadata);
@@ -119,12 +126,14 @@ class ElectronicInvoiceConnectionController extends Controller
         $connection = $this->connection($company);
 
         $connection->fill([
-            'connection_status' => ElectronicInvoiceConnection::STATUS_DRAFT,
+            'connection_status' => ElectronicInvoiceConnection::STATUS_NOT_CONFIGURED,
             'setup_step' => 3,
             'client_id' => null,
             'client_secret' => null,
             'access_token' => null,
             'refresh_token' => null,
+            'oauth_state_hash' => null,
+            'oauth_state_expires_at' => null,
             'token_expires_at' => null,
             'external_company_id' => null,
             'credentials_configured_at' => null,
@@ -161,7 +170,7 @@ class ElectronicInvoiceConnectionController extends Controller
                 'provider' => ElectronicInvoiceConnection::PROVIDER_SUPERPDP,
                 'environment' => config('electronic-invoicing.providers.superpdp.environment', 'sandbox'),
                 'setup_step' => 1,
-                'connection_status' => ElectronicInvoiceConnection::STATUS_DRAFT,
+                'connection_status' => ElectronicInvoiceConnection::STATUS_NOT_CONFIGURED,
             ],
         );
     }
@@ -178,7 +187,10 @@ class ElectronicInvoiceConnectionController extends Controller
                 'account_created' => (bool) $connection->account_created_at,
                 'company_verified' => (bool) $connection->company_verified_at,
                 'has_credentials' => $connection->hasCredentials(),
+                'oauth_ready' => app(SuperPdpProvider::class)->oauthConfigured(),
+                'requires_authorization' => $connection->hasCredentials() && ! filled($connection->access_token),
                 'masked_client_id' => $connection->maskedClientId(),
+                'token_expires_at' => $connection->token_expires_at?->toIso8601String(),
                 'last_tested_at' => $connection->last_tested_at?->toIso8601String(),
                 'last_connected_at' => $connection->last_connected_at?->toIso8601String(),
                 'last_error_code' => $connection->last_error_code,

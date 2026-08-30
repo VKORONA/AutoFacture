@@ -12,10 +12,21 @@ class ElectronicInvoiceConnection extends Model
 
     public const PROVIDER_SUPERPDP = 'superpdp';
 
-    public const STATUS_DRAFT = 'draft';
-    public const STATUS_CONFIGURED = 'configured';
+    public const STATUS_NOT_CONFIGURED = 'not_configured';
+    public const STATUS_CREDENTIALS_SAVED = 'credentials_saved';
+    public const STATUS_AUTHORIZATION_PENDING = 'authorization_pending';
     public const STATUS_CONNECTED = 'connected';
-    public const STATUS_ERROR = 'error';
+    public const STATUS_TOKEN_REFRESH_REQUIRED = 'token_refresh_required';
+    public const STATUS_CONNECTION_LOST = 'connection_lost';
+
+    /** @deprecated Kept for extensions compiled against the beta constants. */
+    public const STATUS_DRAFT = self::STATUS_NOT_CONFIGURED;
+
+    /** @deprecated Kept for extensions compiled against the beta constants. */
+    public const STATUS_CONFIGURED = self::STATUS_CREDENTIALS_SAVED;
+
+    /** @deprecated Kept for extensions compiled against the beta constants. */
+    public const STATUS_ERROR = self::STATUS_CONNECTION_LOST;
 
     protected $guarded = ['id'];
 
@@ -31,6 +42,7 @@ class ElectronicInvoiceConnection extends Model
             'access_token' => 'encrypted',
             'refresh_token' => 'encrypted',
             'token_expires_at' => 'datetime',
+            'oauth_state_expires_at' => 'datetime',
             'last_tested_at' => 'datetime',
             'last_connected_at' => 'datetime',
             'metadata' => 'array',
