@@ -3,6 +3,7 @@
 namespace Crater\Models;
 
 use Carbon\Carbon;
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Crater\Traits\HasCustomFieldsTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,11 +11,11 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceItem extends Model
 {
-    use HasFactory;
     use HasCustomFieldsTrait;
+    use HasFactory;
 
     protected $guarded = [
-        'id'
+        'id',
     ];
 
     protected $casts = [
@@ -25,6 +26,28 @@ class InvoiceItem extends Model
         'discount_val' => 'integer',
         'tax' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $invoiceItem): void {
+            if ($invoiceItem->item_id) {
+                $catalogType = Item::query()
+                    ->whereKey($invoiceItem->item_id)
+                    ->where('company_id', $invoiceItem->company_id)
+                    ->value('business_activity_type');
+
+                if ($catalogType) {
+                    $invoiceItem->business_activity_type = $catalogType instanceof BusinessActivityType
+                        ? $catalogType->value
+                        : (string) $catalogType;
+                }
+            }
+
+            $invoiceItem->business_activity_type = BusinessActivityType::tryFrom(
+                (string) $invoiceItem->business_activity_type
+            )?->value ?? BusinessActivityType::SERVICE_BIC->value;
+        });
+    }
 
     public function invoice()
     {

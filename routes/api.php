@@ -7,6 +7,8 @@ use Crater\Http\Controllers\V1\Admin\Backup\BackupsController;
 use Crater\Http\Controllers\V1\Admin\Backup\DownloadBackupController;
 use Crater\Http\Controllers\V1\Admin\Company\CompaniesController;
 use Crater\Http\Controllers\V1\Admin\Company\CompanyController as AdminCompanyController;
+use Crater\Http\Controllers\V1\Admin\CompanyRegistry\CompanyRegistryController;
+use Crater\Http\Controllers\V1\Admin\CompanyRegistry\CompanyRegistryLookupController;
 use Crater\Http\Controllers\V1\Admin\Customer\CustomersController;
 use Crater\Http\Controllers\V1\Admin\Customer\CustomerStatsController;
 use Crater\Http\Controllers\V1\Admin\CustomField\CustomFieldsController;
@@ -244,6 +246,13 @@ Route::prefix('/v1')->group(function () {
 
             // Customers
             //----------------------------------
+
+            Route::get('/company-registry/search', [CompanyRegistryController::class, 'search'])
+                ->middleware('throttle:company-registry');
+
+            Route::get('/company-registry/lookup/{identifier}', CompanyRegistryLookupController::class)
+                ->where('identifier', '[0-9\s.-]+')
+                ->middleware('throttle:company-registry');
 
             Route::post('/customers/delete', [CustomersController::class, 'delete']);
 

@@ -2,22 +2,24 @@
 
 namespace Crater\Http\Resources;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ItemResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return array
-     */
     public function toArray($request)
     {
+        $activityType = $this->business_activity_type instanceof BusinessActivityType
+            ? $this->business_activity_type
+            : BusinessActivityType::tryFrom((string) $this->business_activity_type)
+                ?? BusinessActivityType::SERVICE_BIC;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
+            'business_activity_type' => $activityType->value,
+            'business_activity_label' => $activityType->label(),
             'price' => $this->price,
             'unit_id' => $this->unit_id,
             'company_id' => $this->company_id,

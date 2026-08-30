@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Crater\Models\Estimate;
 use Crater\Models\EstimateItem;
 use Crater\Models\Item;
@@ -24,6 +25,7 @@ class EstimateItemFactory extends Factory
             'description' => function (array $item) {
                 return Item::find($item['item_id'])->description;
             },
+            'business_activity_type' => BusinessActivityType::SERVICE_BIC->value,
             'price' => function (array $item) {
                 return Item::find($item['item_id'])->price;
             },
@@ -36,10 +38,14 @@ class EstimateItemFactory extends Factory
             },
             'discount_type' => $this->faker->randomElement(['percentage', 'fixed']),
             'discount_val' => function (array $estimate) {
-                return $estimate['discount_type'] == 'percentage' ? $this->faker->numberBetween($min = 0, $max = 100) : $this->faker->randomDigitNotNull;
+                return $estimate['discount_type'] == 'percentage'
+                    ? $this->faker->numberBetween(0, 100)
+                    : $this->faker->randomDigitNotNull;
             },
             'discount' => function (array $estimate) {
-                return $estimate['discount_type'] == 'percentage' ? (($estimate['discount_val'] * $estimate['total']) / 100) : $estimate['discount_val'];
+                return $estimate['discount_type'] == 'percentage'
+                    ? ($estimate['discount_val'] * $estimate['total']) / 100
+                    : $estimate['discount_val'];
             },
             'exchange_rate' => $this->faker->randomDigitNotNull,
             'base_discount_val' => $this->faker->randomDigitNotNull,

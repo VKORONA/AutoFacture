@@ -85,6 +85,12 @@
               </div>
             </div>
 
+            <CompanyRegistrySearch
+              v-if="isBusinessCustomer"
+              :current-customer-id="customerStore.currentCustomer.id"
+              @select="applyRegistryCompany"
+            />
+
             <BaseInputGrid class="mt-6">
               <BaseInputGroup
                 :label="isBusinessCustomer ? 'Nom commercial ou raison sociale' : 'Nom et prénom'"
@@ -141,6 +147,13 @@
 
                 <BaseInputGroup label="Code APE / NAF">
                   <BaseInput v-model.trim="customerStore.currentCustomer.ape_code" placeholder="4322B" />
+                </BaseInputGroup>
+
+                <BaseInputGroup label="Code de forme juridique">
+                  <BaseInput
+                    v-model.trim="customerStore.currentCustomer.legal_form"
+                    placeholder="Code officiel"
+                  />
                 </BaseInputGroup>
               </template>
 
@@ -299,6 +312,7 @@ import {
 } from '@vuelidate/validators'
 import { useCustomerStore } from '@/scripts/admin/stores/customer'
 import { useGlobalStore } from '@/scripts/admin/stores/global'
+import CompanyRegistrySearch from './partials/CompanyRegistrySearch.vue'
 
 const customerStore = useCustomerStore()
 const globalStore = useGlobalStore()
@@ -399,6 +413,9 @@ watch(
       siret: '',
       vat_number: '',
       ape_code: '',
+      legal_form: '',
+      registry_checked_at: null,
+      registry_source: null,
       electronic_invoicing_email: '',
     })
   }
@@ -421,6 +438,31 @@ function customerTypeButtonClass(customerType) {
 function fieldError(field) {
   const validation = v$.value.currentCustomer[field]
   return validation && validation.$error ? validation.$errors[0].$message : ''
+}
+
+function applyRegistryCompany(company) {
+  const france = globalStore.countries.find((country) => country.code === 'FR')
+
+  Object.assign(customerStore.currentCustomer, {
+    customer_type: 'business',
+    name: company.name,
+    company_name: company.company_name,
+    siren: company.siren,
+    siret: company.siret,
+    vat_number: company.vat_number || '',
+    ape_code: company.ape_code || '',
+    legal_form: company.legal_form || '',
+    registry_checked_at: company.verified_at,
+    registry_source: company.source,
+  })
+
+  Object.assign(customerStore.currentCustomer.billing, {
+    name: company.company_name,
+    address_street_1: company.address.street || company.address.full,
+    zip: company.address.postal_code,
+    city: company.address.city,
+    country_id: france?.id || customerStore.currentCustomer.billing.country_id,
+  })
 }
 
 async function submitCustomerData() {

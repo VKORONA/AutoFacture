@@ -89,6 +89,10 @@ export const useCustomerStore = (useWindow = false) => {
         })
       },
 
+      searchCompanyRegistry(params) {
+        return axios.get('/api/v1/company-registry/search', { params })
+      },
+
       fetchViewCustomer(params) {
         return new Promise((resolve, reject) => {
           this.isFetchingViewData = true

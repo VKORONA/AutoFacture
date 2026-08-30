@@ -14,6 +14,8 @@ const SettingsIndex = () =>
 const ElectronicInvoicing = () =>
   import('@/scripts/admin/views/electronic-invoicing/Index.vue')
 const Accounting = () => import('@/scripts/admin/views/accounting/Index.vue')
+const MicroEntrepreneur = () =>
+  import('@/scripts/admin/views/micro-entrepreneur/Index.vue')
 const DocumentTemplates = () =>
   import('@/scripts/admin/views/settings/DocumentTemplatesSetting.vue')
 
@@ -47,6 +49,22 @@ const AdditionalAdminRoutes = [
           ability: abilities.VIEW_INVOICE,
         },
         component: Accounting,
+      },
+    ],
+  },
+  {
+    path: '/admin/micro-entrepreneur',
+    component: LayoutBasic,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'micro-entrepreneur.index',
+        meta: {
+          requiresAuth: true,
+          ability: abilities.VIEW_INVOICE,
+        },
+        component: MicroEntrepreneur,
       },
     ],
   },

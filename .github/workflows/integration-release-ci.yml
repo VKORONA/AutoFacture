@@ -1,0 +1,115 @@
+name: AutoFacture Integration Release CI
+
+on:
+  push:
+    branches:
+      - codex/integration-release
+  pull_request:
+    branches:
+      - feature/exact-premium-invoice-estimate
+  workflow_dispatch:
+
+concurrency:
+  group: autofacture-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Laravel 12 PHP 8.4 — intégration complète
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: autofacture_test
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: autofacture_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SESSION_DRIVER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, curl, dom, fileinfo, gd, imagick, intl, openssl, pdo_mysql, tokenizer, xml, zip
+          coverage: none
+      - name: Préparer Laravel
+        run: |
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+      - name: Migrations et tests
+        run: |
+          php artisan migrate:fresh --force
+          php artisan test
+      - name: Format PHP des modules intégrés
+        run: |
+          vendor/bin/pint \
+            app/Domain/CompanyRegistry \
+            app/Domain/ElectronicInvoicing \
+            app/Domain/MicroEntrepreneur \
+            app/Http/Controllers/V1/Admin/CompanyRegistry \
+            app/Http/Controllers/V1/Admin/ElectronicInvoicing \
+            app/Http/Controllers/V1/Admin/MicroEntrepreneur \
+            app/Http/Controllers/HealthController.php \
+            app/Models/ElectronicInvoiceConnection.php \
+            app/Models/EstimateItem.php \
+            app/Models/InvoiceItem.php \
+            app/Models/Item.php \
+            config/electronic-invoicing.php \
+            config/micro-entrepreneur.php \
+            database/migrations/2026_08_10_180000_add_company_registry_fields_to_customers.php \
+            database/migrations/2026_07_21_100000_add_micro_entrepreneur_classification_and_settings.php \
+            database/migrations/2026_08_30_100000_harden_electronic_invoice_oauth_state.php \
+            routes/autofacture.php \
+            tests/Feature/Admin/CompanyRegistryTest.php \
+            tests/Feature/Admin/ElectronicInvoicingConnectionTest.php \
+            tests/Feature/Admin/MicroEntrepreneurDeclarationTest.php \
+            tests/Feature/HealthTest.php
+          git --no-pager diff --exit-code
+
+  frontend:
+    name: Vue — parcours critiques
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Installer
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Lint ciblé
+        run: |
+          npx eslint \
+            resources/scripts/admin/components/estimate-invoice-common/CreateItems.vue \
+            resources/scripts/admin/stores/electronic-invoicing.js \
+            resources/scripts/admin/stores/micro-entrepreneur.js \
+            resources/scripts/admin/views/customers/partials/CompanyRegistrySearch.vue \
+            resources/scripts/admin/views/electronic-invoicing/Index.vue \
+            resources/scripts/admin/views/items/Create.vue \
+            resources/scripts/admin/views/micro-entrepreneur/Index.vue
+      - name: Compiler
+        run: npm run build
+
+  docker:
+    name: Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker compose build app

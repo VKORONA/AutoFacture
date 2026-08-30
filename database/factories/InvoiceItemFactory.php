@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use Crater\Domain\MicroEntrepreneur\BusinessActivityType;
 use Crater\Models\InvoiceItem;
 use Crater\Models\Item;
 use Crater\Models\RecurringInvoice;
@@ -10,18 +11,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InvoiceItemFactory extends Factory
 {
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
     protected $model = InvoiceItem::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
     public function definition()
     {
         return [
@@ -32,20 +23,25 @@ class InvoiceItemFactory extends Factory
             'description' => function (array $item) {
                 return Item::find($item['item_id'])->description;
             },
+            'business_activity_type' => BusinessActivityType::SERVICE_BIC->value,
             'price' => function (array $item) {
                 return Item::find($item['item_id'])->price;
             },
             'company_id' => User::find(1)->companies()->first()->id,
             'quantity' => $this->faker->randomDigitNotNull,
             'total' => function (array $item) {
-                return ($item['price'] * $item['quantity']);
+                return $item['price'] * $item['quantity'];
             },
             'discount_type' => $this->faker->randomElement(['percentage', 'fixed']),
             'discount_val' => function (array $invoice) {
-                return $invoice['discount_type'] == 'percentage' ? $this->faker->numberBetween($min = 0, $max = 100) : $this->faker->randomDigitNotNull;
+                return $invoice['discount_type'] == 'percentage'
+                    ? $this->faker->numberBetween(0, 100)
+                    : $this->faker->randomDigitNotNull;
             },
             'discount' => function (array $invoice) {
-                return $invoice['discount_type'] == 'percentage' ? (($invoice['discount_val'] * $invoice['total']) / 100) : $invoice['discount_val'];
+                return $invoice['discount_type'] == 'percentage'
+                    ? ($invoice['discount_val'] * $invoice['total']) / 100
+                    : $invoice['discount_val'];
             },
             'tax' => $this->faker->randomDigitNotNull,
             'recurring_invoice_id' => RecurringInvoice::factory(),

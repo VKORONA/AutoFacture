@@ -23,7 +23,9 @@ Le parcours proposé est volontairement simple :
 - stockage chiffré du `client_id` et du `client_secret` ;
 - identifiant masqué après enregistrement ;
 - clé secrète absente de toutes les réponses API ;
-- test de connexion via un connecteur fournisseur générique ;
+- parcours OAuth Authorization Code avec état aléatoire à usage unique et expiration à dix minutes ;
+- échange et renouvellement des jetons, stockés avec le chiffrement Laravel ;
+- contrôle de session distant avant d'afficher l'état « Connecté » ;
 - remplacement ou suppression de la liaison ;
 - droits d’écriture réservés au propriétaire de l’entreprise ;
 - architecture permettant d’ajouter ultérieurement une autre plateforme agréée.
@@ -32,15 +34,16 @@ Le parcours proposé est volontairement simple :
 
 Cette version **ne transmet encore aucune facture réelle**.
 
-Les paramètres exacts de test distant restent vides tant que les éléments suivants n’ont pas été obtenus et validés dans le bac à sable officiel SUPER PDP :
+Les URL exactes restent vides tant qu'elles n'ont pas été obtenues et validées dans le bac à sable officiel SUPER PDP :
 
-- URL de l’endpoint de contrôle ;
-- méthode d’authentification définitive ;
-- noms des en-têtes ou flux OAuth ;
+- URL d'autorisation OAuth ;
+- URL d'échange des jetons ;
+- URL de contrôle de session ;
+- portées OAuth autorisées ;
 - contrat OpenAPI/AFNOR à utiliser ;
 - identifiants de bac à sable AutoFacture.
 
-AutoFacture ne doit pas deviner ces paramètres. Tant qu’ils ne sont pas configurés, le bouton **Tester la connexion** confirme uniquement que les codes sont chiffrés et enregistrés, puis explique que le test distant n’est pas encore activé.
+AutoFacture ne doit pas deviner ces paramètres. Tant qu'ils ne sont pas configurés, l'autorisation est bloquée et l'interface indique clairement que la configuration serveur est incomplète. Aucun état « Connecté » n'est simulé.
 
 ## Variables d’environnement
 
@@ -50,6 +53,10 @@ EINVOICING_DEFAULT_PROVIDER=superpdp
 SUPERPDP_ENVIRONMENT=sandbox
 SUPERPDP_PORTAL_URL=https://www.superpdp.tech
 SUPERPDP_DOCUMENTATION_URL=https://www.superpdp.tech/documentation/
+SUPERPDP_AUTHORIZE_URL=
+SUPERPDP_TOKEN_URL=
+SUPERPDP_SESSION_URL=
+SUPERPDP_SCOPES=
 SUPERPDP_TEST_URL=
 SUPERPDP_CLIENT_ID_HEADER=
 SUPERPDP_CLIENT_SECRET_HEADER=
@@ -68,7 +75,8 @@ app/Domain/ElectronicInvoicing/
 
 app/Models/ElectronicInvoiceConnection.php
 app/Http/Controllers/V1/Admin/ElectronicInvoicing/
-└── ElectronicInvoiceConnectionController.php
+├── ElectronicInvoiceConnectionController.php
+└── SuperPdpOAuthController.php
 
 resources/scripts/admin/views/electronic-invoicing/Index.vue
 resources/scripts/admin/stores/electronic-invoicing.js
@@ -109,11 +117,11 @@ Pour cette première bêta, utiliser uniquement des codes de démonstration, jam
 ## Prochains incréments
 
 1. obtenir un compte éditeur et les accès sandbox officiels ;
-2. implémenter OAuth Authorization Code lorsque le contrat officiel est confirmé ;
-3. brancher l’API AFNOR XP Z12-013 ;
+2. renseigner et valider le parcours OAuth existant avec le contrat officiel ;
+3. brancher le contrat de données officiel de la plateforme agréée ;
 4. générer et valider Factur-X EN16931 ;
-5. transmettre une facture de test ;
-6. recevoir et vérifier les webhooks ;
-7. créer les centres ventes, achats, anomalies et journal de preuve ;
+5. transmettre et recevoir une facture de test ;
+6. recevoir, signer et rejouer de façon idempotente les webhooks ;
+7. activer les centres ventes, achats, anomalies et journal de preuve ;
 8. ajouter l’e-reporting et les statuts de paiement ;
 9. effectuer une revue de sécurité avant toute production.

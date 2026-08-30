@@ -11,6 +11,7 @@ return [
         'invoices' => env('FEATURE_INVOICES', true),
         'electronic_invoicing' => env('FEATURE_ELECTRONIC_INVOICING', true),
         'accounting' => env('FEATURE_ACCOUNTING', true),
+        'micro_entrepreneur' => env('FEATURE_MICRO_ENTREPRENEUR', true),
         'payments' => env('FEATURE_PAYMENTS', true),
         'users' => env('FEATURE_USERS', true),
         'settings' => env('FEATURE_SETTINGS', true),
@@ -71,6 +72,16 @@ return [
             'ability' => 'view-invoice',
             'model' => Invoice::class,
         ],
+        [
+            'title' => 'Déclaration micro',
+            'group' => 3,
+            'link' => '/admin/micro-entrepreneur',
+            'icon' => 'ChartBarIcon',
+            'name' => 'Micro Entrepreneur',
+            'owner_only' => false,
+            'ability' => 'view-invoice',
+            'model' => Invoice::class,
+        ],
     ],
 
     'additional_setting_menu' => [
@@ -95,6 +106,7 @@ return [
         'Credit Notes' => 'invoices',
         'Electronic Invoicing' => 'electronic_invoicing',
         'Accounting' => 'accounting',
+        'Micro Entrepreneur' => 'micro_entrepreneur',
         'Recurring Invoices' => 'recurring_invoices',
         'Payments' => 'payments',
         'Expenses' => 'expenses',
@@ -138,6 +150,10 @@ return [
         'accounting' => [
             'admin/accounting*',
             'api/v1/accounting*',
+        ],
+        'micro_entrepreneur' => [
+            'admin/micro-entrepreneur*',
+            'api/v1/micro-entrepreneur*',
         ],
         'recurring_invoices' => [
             'admin/recurring-invoices*',
