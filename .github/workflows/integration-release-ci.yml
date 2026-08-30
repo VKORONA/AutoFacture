@@ -59,7 +59,7 @@ jobs:
           php artisan test
       - name: Format PHP des modules intégrés
         run: |
-          vendor/bin/pint --test \
+          vendor/bin/pint \
             app/Domain/CompanyRegistry \
             app/Domain/ElectronicInvoicing \
             app/Domain/MicroEntrepreneur \
@@ -81,6 +81,7 @@ jobs:
             tests/Feature/Admin/ElectronicInvoicingConnectionTest.php \
             tests/Feature/Admin/MicroEntrepreneurDeclarationTest.php \
             tests/Feature/HealthTest.php
+          git --no-pager diff --exit-code
 
   frontend:
     name: Vue — parcours critiques
